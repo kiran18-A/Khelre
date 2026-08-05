@@ -1,0 +1,1062 @@
+<%- include('layout/header') %>
+
+<style>
+/* CRICKET DIGITAL SCOREBOARD STYLES */
+body {
+    background: #0f172a !important;
+    color: white !important;
+    overflow-x: hidden;
+}
+
+.scoreboard-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+.sb-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.sb-sport-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.sb-title {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin: 0;
+    background: linear-gradient(135deg, #fff, #bbf7d0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.sb-host {
+    color: #94a3b8;
+    margin-top: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.digital-board {
+    background: linear-gradient(180deg, #1e293b, #0f172a);
+    border: 2px solid #334155;
+    border-radius: 24px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.team-section {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.team-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.cricket-score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.runs-wickets {
+    font-size: 4.5rem;
+    font-weight: 900;
+    color: #f8fafc;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+
+.overs {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+.cricket-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    width: 100%;
+}
+
+.btn-run {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-run:hover { background: #2563eb; transform: translateY(-2px); }
+
+.btn-out {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1rem;
+    height: 50px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-out:hover { background: #dc2626; transform: translateY(-2px); }
+
+.btn-extra {
+    background: #eab308;
+    color: #422006;
+    border: none;
+    border-radius: 8px;
+    padding: 0 1rem;
+    height: 50px;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-extra:hover { background: #ca8a04; transform: translateY(-2px); }
+
+.btn-minus {
+    background: #64748b;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.actions-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    align-items: center;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #94a3b8;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+}
+.btn-back:hover { color: #f8fafc; }
+
+.btn-save {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 800;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(34, 197, 94, 0.6);
+}
+
+@media (max-width: 768px) {
+    .sb-title { font-size: 1.8rem; }
+    .runs-wickets { font-size: 3.5rem; }
+    .overs { font-size: 1.4rem; }
+    .btn-run { width: 45px; height: 45px; font-size: 1.1rem; }
+    .actions-row { flex-direction: column; gap: 1rem; }
+}
+</style>
+
+<div class="scoreboard-container">
+    <div class="sb-header">
+        <div class="sb-sport-tag">🏏 &nbsp;Cricket Live Scorecard</div>
+        <h1 class="sb-title"><%= match.team_name %></h1>
+        <div class="sb-host">Hosted by <%= hostName %></div>
+    </div>
+
+    <% 
+        function parseCricketScore(str) {
+            if (!str || str === '0 - 0') return { r: 0, w: 0, o: 0, b: 0 };
+            const m = str.match(/^(\d+)(?:\/(\d+))?(?:\s*\(([\d.]+)\))?$/);
+            if (!m) return { r: 0, w: 0, o: 0, b: 0 };
+            let overs = 0, balls = 0;
+            if (m[3]) {
+                const parts = m[3].split('.');
+                overs = parseInt(parts[0]) || 0;
+                balls = parseInt(parts[1]) || 0;
+            }
+            return {
+                r: parseInt(m[1]) || 0,
+                w: parseInt(m[2]) || 0,
+                o: overs,
+                b: balls
+            };
+        }
+
+        let scoreStr = match.score || '0 - 0';
+        const teamScores = scoreStr.split('-').map(s => s.trim());
+        const tA = parseCricketScore(teamScores[0]);
+        const tB = parseCricketScore(teamScores[1]);
+        const battingTeam = matchState.batting_team || 'A';
+    %>
+
+    <form action="/sport/cricket/score/<%= match.id %>?redirect=scorecard" method="POST" id="scoreForm">
+        <% if (canEditScore) { %>
+        <div style="text-align: center; margin-bottom: 15px;">
+            <label style="color: #94a3b8; font-weight: bold; margin-right: 10px;">Current Inning:</label>
+            <select class="role-select" data-team="global" data-role="batting_team" onchange="saveRoles()" style="background: #1e293b; color: white; border: 1px solid #334155; border-radius: 6px; padding: 6px 12px; font-weight: bold;">
+                <option value="A" <%= battingTeam === 'A' ? 'selected' : '' %>>Team A Batting</option>
+                <option value="B" <%= battingTeam === 'B' ? 'selected' : '' %>>Team B Batting</option>
+            </select>
+        </div>
+        <% } else { %>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">
+                    <%= battingTeam === 'A' ? 'Team A is Batting' : 'Team B is Batting' %>
+                </span>
+            </div>
+        <% } %>
+
+        <div class="digital-board">
+            
+            <!-- Team A -->
+            <div class="team-section">
+                <div style="font-size: 1rem; font-weight: 800; color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.75rem;">&#x1F535; Team A</div>
+                <!-- Team A Roster -->
+                <div class="team-roster" style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 15px; width: 100%;">
+                <% if (teamAPlayerObjs.length === 0) { %>
+                        <span style="color: #475569; font-style: italic; text-align: center;">Awaiting Players...</span>
+                    <% } else { %>
+                        <% if (canEditScore && match.status === 'started') { %>
+                        <div style="font-size:0.75rem; color:#64748b; text-align:center; margin-bottom:6px;">
+                            <% if (battingTeam === 'A') { %>👆 Tap a player to set as <strong style="color:#4ade80;">Striker</strong><% } else { %>👆 Tap a player to set as <strong style="color:#f87171;">Bowler</strong><% } %>
+                        </div>
+                        <% } %>
+                        <% teamAPlayerObjs.forEach(p => {
+                            let ps = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id] : {};
+                            let pr = ps.runs || 0;
+                            let pw = ps.wickets || 0;
+                            let pb = ps.balls_faced || 0;
+                            let isOut = matchState[`player_${p.id}_out`] === 'true' || matchState[`player_${p.id}_out`] === true;
+                            let isBat = (battingTeam === 'A' && (teamAPlayerObjs.length === 1 || matchState.team_a_batsman == p.id)) && !isOut;
+                            let isBowl = (battingTeam === 'B' && (teamAPlayerObjs.length === 1 || matchState.team_a_bowler == p.id));
+                            let roleStr = battingTeam === 'A' ? 'batsman' : 'bowler';
+                            if (isBat && teamAPlayerObjs.length === 1 && pr === 0 && tA.r > 0) pr = tA.r;
+                            let sr = pb > 0 ? ((pr / pb) * 100).toFixed(0) : '--';
+                            let borderCol = isBat ? '#22c55e' : (isBowl ? '#f87171' : 'rgba(255,255,255,0.08)');
+                            let bgCol = isBat ? 'rgba(34,197,94,0.12)' : (isBowl ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)');
+                            let nameCol = isBat ? '#4ade80' : (isBowl ? '#f87171' : '#cbd5e1');
+                        %>
+                            <div class="roster-player <%= isBat || isBowl ? 'selected-role' : '' %>"
+                                 data-team="a" data-role="<%= roleStr %>" data-pid="<%= p.id %>" data-is-out="<%= isOut %>"
+                                 onclick="selectPlayer(this)"
+                                 style="background: <%= bgCol %>; padding: 10px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid <%= borderCol %>; gap: 8px; transition: all 0.2s; opacity: <%= isOut ? '0.5' : '1' %>; cursor: pointer;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                                    <span style="font-size: 1.2rem;"><%= isBat ? '🏏' : (isBowl ? '🎾' : '👤') %></span>
+                                    <div style="min-width: 0;">
+                                        <div class="roster-name" style="color: <%= nameCol %>; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <%= p.name %>
+                                            <% if (isBat) { %><span style="font-size:0.65rem;background:#22c55e;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">⚡ STRIKER</span><% } %>
+                                            <% if (isBowl) { %><span style="font-size:0.65rem;background:#f87171;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">⚡ BOWLING</span><% } %>
+                                            <% if (isOut) { %><span class="out-badge" style="font-size:0.65rem;background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">OUT</span><% } %>
+                                        </div>
+                                        <div style="display: flex; gap: 10px; margin-top: 2px;">
+                                            <span style="font-size: 0.68rem; color: #64748b;">Last: <strong style="color: #94a3b8;"><%= p.last_match_runs %>R / <%= p.last_match_wickets %>W</strong></span>
+                                            <span style="font-size: 0.68rem; color: #64748b;">Career: <strong style="color: #94a3b8;"><%= p.total_runs %>R / <%= p.total_wickets %>W</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                    <% if (isBat) { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #4ade80;"><span class="r-val"><%= pr %></span>R</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">SR: <span class="sr-val"><%= sr %></span></div>
+                                        </div>
+                                    <% } else if (isBowl) { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #f87171;"><span class="w-val"><%= pw %></span>W</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">inning</div>
+                                        </div>
+                                    <% } else { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #94a3b8;"><span class="r-val"><%= pr %></span>R</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">SR: <span class="sr-val"><%= sr %></span></div>
+                                        </div>
+                                    <% } %>
+                                    <% if (canEditScore && match.status === 'started' && !isBat && !isBowl && !(battingTeam === 'A' && isOut)) { %>
+                                        <button type="button" onclick="selectPlayer(this.closest('.roster-player'))" style="background: <%= battingTeam === 'A' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)' %>; color: <%= battingTeam === 'A' ? '#4ade80' : '#f87171' %>; border: 1px solid <%= battingTeam === 'A' ? '#22c55e' : '#f87171' %>; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                            <%= battingTeam === 'A' ? '🏏 Set Striker' : '🎾 Set Bowler' %>
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } %>
+                </div>
+
+                
+                <div class="cricket-score-display">
+                    <div class="runs-wickets" id="scoreA"><%= tA.r %>/<%= tA.w %></div>
+                    <div class="overs">(<span id="oversA"><%= tA.o %>.<%= tA.b %></span><% if (match.overs) { %> / <%= match.overs %> <span style="font-size:1.2rem">ov</span><% } %>)</div>
+                </div>
+
+                <% if (canEditScore && match.status === 'started' && battingTeam === 'A') { %>
+                <div class="cricket-controls" id="controlsA">
+                    <button type="button" class="btn-run" onclick="addScore('A', 0, 0, 1)">0</button>
+                    <button type="button" class="btn-run" onclick="addScore('A', 1, 0, 1)">1</button>
+                    <button type="button" class="btn-run" onclick="addScore('A', 2, 0, 1)">2</button>
+                    <button type="button" class="btn-run" onclick="addScore('A', 3, 0, 1)">3</button>
+                    <button type="button" class="btn-run" onclick="addScore('A', 4, 0, 1)">4</button>
+                    <button type="button" class="btn-run" onclick="addScore('A', 6, 0, 1)">6</button>
+                    <button type="button" class="btn-out" onclick="addScore('A', 0, 1, 1)">OUT</button>
+                    <button type="button" class="btn-extra" onclick="addScore('A', 1, 0, 0, true)">WD</button>
+                    <button type="button" class="btn-extra" onclick="addScore('A', 1, 0, 0, true)">NB</button>
+                    <button type="button" class="btn-minus" onclick="undoTeam('A')" style="width: auto; padding: 0 1.5rem; flex-grow: 1;">&#8617; Undo Last</button>
+                </div>
+                <% } %>
+            </div>
+
+            <!-- Team B -->
+            <div class="team-section">
+                <div style="font-size: 1rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.75rem;">&#x1F7E1; Team B</div>
+                <!-- Team B Roster -->
+                <div class="team-roster" style="display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 15px; width: 100%;">
+                <% if (teamBPlayerObjs.length === 0) { %>
+                        <span style="color: #475569; font-style: italic; text-align: center;">Awaiting Opponents...</span>
+                    <% } else { %>
+                        <% if (canEditScore && match.status === 'started') { %>
+                        <div style="font-size:0.75rem; color:#64748b; text-align:center; margin-bottom:6px;">
+                            <% if (battingTeam === 'B') { %>👆 Tap a player to set as <strong style="color:#4ade80;">Striker</strong><% } else { %>👆 Tap a player to set as <strong style="color:#f87171;">Bowler</strong><% } %>
+                        </div>
+                        <% } %>
+                        <% teamBPlayerObjs.forEach(p => {
+                            let ps = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id] : {};
+                            let pr = ps.runs || 0;
+                            let pw = ps.wickets || 0;
+                            let pb = ps.balls_faced || 0;
+                            let isOut = matchState[`player_${p.id}_out`] === 'true' || matchState[`player_${p.id}_out`] === true;
+                            let isBat = (battingTeam === 'B' && (teamBPlayerObjs.length === 1 || matchState.team_b_batsman == p.id)) && !isOut;
+                            let isBowl = (battingTeam === 'A' && (teamBPlayerObjs.length === 1 || matchState.team_b_bowler == p.id));
+                            let roleStr = battingTeam === 'B' ? 'batsman' : 'bowler';
+                            if (isBat && teamBPlayerObjs.length === 1 && pr === 0 && tB.r > 0) pr = tB.r;
+                            let sr = pb > 0 ? ((pr / pb) * 100).toFixed(0) : '--';
+                            let borderCol = isBat ? '#22c55e' : (isBowl ? '#f87171' : 'rgba(255,255,255,0.08)');
+                            let bgCol = isBat ? 'rgba(34,197,94,0.12)' : (isBowl ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.04)');
+                            let nameCol = isBat ? '#4ade80' : (isBowl ? '#f87171' : '#cbd5e1');
+                        %>
+                            <div class="roster-player <%= isBat || isBowl ? 'selected-role' : '' %>"
+                                 data-team="b" data-role="<%= roleStr %>" data-pid="<%= p.id %>" data-is-out="<%= isOut %>"
+                                 onclick="selectPlayer(this)"
+                                 style="background: <%= bgCol %>; padding: 10px 12px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1.5px solid <%= borderCol %>; gap: 8px; transition: all 0.2s; opacity: <%= isOut ? '0.5' : '1' %>; cursor: pointer;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                                    <span style="font-size: 1.2rem;"><%= isBat ? '🏏' : (isBowl ? '🎾' : '👤') %></span>
+                                    <div style="min-width: 0;">
+                                        <div class="roster-name" style="color: <%= nameCol %>; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            <%= p.name %>
+                                            <% if (isBat) { %><span style="font-size:0.65rem;background:#22c55e;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">⚡ STRIKER</span><% } %>
+                                            <% if (isBowl) { %><span style="font-size:0.65rem;background:#f87171;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">⚡ BOWLING</span><% } %>
+                                            <% if (isOut) { %><span class="out-badge" style="font-size:0.65rem;background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">OUT</span><% } %>
+                                        </div>
+                                        <div style="display: flex; gap: 10px; margin-top: 2px;">
+                                            <span style="font-size: 0.68rem; color: #64748b;">Last: <strong style="color: #94a3b8;"><%= p.last_match_runs %>R / <%= p.last_match_wickets %>W</strong></span>
+                                            <span style="font-size: 0.68rem; color: #64748b;">Career: <strong style="color: #94a3b8;"><%= p.total_runs %>R / <%= p.total_wickets %>W</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                    <% if (isBat) { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #4ade80;"><span class="r-val"><%= pr %></span>R</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">SR: <span class="sr-val"><%= sr %></span></div>
+                                        </div>
+                                    <% } else if (isBowl) { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #f87171;"><span class="w-val"><%= pw %></span>W</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">inning</div>
+                                        </div>
+                                    <% } else { %>
+                                        <div style="text-align:right;">
+                                            <div style="font-size: 1.05rem; font-weight: 900; color: #94a3b8;"><span class="r-val"><%= pr %></span>R</div>
+                                            <div style="font-size: 0.68rem; color: #64748b;">SR: <span class="sr-val"><%= sr %></span></div>
+                                        </div>
+                                    <% } %>
+                                    <% if (canEditScore && match.status === 'started' && !isBat && !isBowl && !(battingTeam === 'B' && isOut)) { %>
+                                        <button type="button" onclick="selectPlayer(this.closest('.roster-player'))" style="background: <%= battingTeam === 'B' ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)' %>; color: <%= battingTeam === 'B' ? '#4ade80' : '#f87171' %>; border: 1px solid <%= battingTeam === 'B' ? '#22c55e' : '#f87171' %>; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; cursor: pointer; white-space: nowrap; transition: all 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                                            <%= battingTeam === 'B' ? '🏏 Set Striker' : '🎾 Set Bowler' %>
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } %>
+                </div>
+
+                
+                <div class="cricket-score-display">
+                    <div class="runs-wickets" id="scoreB"><%= tB.r %>/<%= tB.w %></div>
+                    <div class="overs">(<span id="oversB"><%= tB.o %>.<%= tB.b %></span><% if (match.overs) { %> / <%= match.overs %> <span style="font-size:1.2rem">ov</span><% } %>)</div>
+                </div>
+
+                <% if (canEditScore && match.status === 'started' && battingTeam === 'B') { %>
+                <div class="cricket-controls" id="controlsB">
+                    <button type="button" class="btn-run" onclick="addScore('B', 0, 0, 1)">0</button>
+                    <button type="button" class="btn-run" onclick="addScore('B', 1, 0, 1)">1</button>
+                    <button type="button" class="btn-run" onclick="addScore('B', 2, 0, 1)">2</button>
+                    <button type="button" class="btn-run" onclick="addScore('B', 3, 0, 1)">3</button>
+                    <button type="button" class="btn-run" onclick="addScore('B', 4, 0, 1)">4</button>
+                    <button type="button" class="btn-run" onclick="addScore('B', 6, 0, 1)">6</button>
+                    <button type="button" class="btn-out" onclick="addScore('B', 0, 1, 1)">OUT</button>
+                    <button type="button" class="btn-extra" onclick="addScore('B', 1, 0, 0, true)">WD</button>
+                    <button type="button" class="btn-extra" onclick="addScore('B', 1, 0, 0, true)">NB</button>
+                    <button type="button" class="btn-minus" onclick="undoTeam('B')" style="width: auto; padding: 0 1.5rem; flex-grow: 1;">&#8617; Undo Last</button>
+                </div>
+                <% } %>
+            </div>
+
+        </div>
+
+
+
+
+        <div style="margin-top: 2rem; background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 1.5rem;">
+            <div style="text-align: center; font-size: 1.2rem; font-weight: 800; color: #94a3b8; margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 2px;">Score Comparison</div>
+            <div style="position: relative; height: 250px; width: 100%;">
+                <canvas id="scoreChart"></canvas>
+            </div>
+        </div>
+
+        <input type="hidden" name="score" id="scoreInput" value="<%= scoreStr %>">
+        <input type="hidden" name="cricketDelta" id="cricketDeltaInput" value="0,0,0|0,0,0">
+        <input type="hidden" name="playerStatsDelta" id="playerStatsDeltaInput" value="{}">
+
+        <div class="actions-row">
+            <a href="/sport/cricket" class="btn-back">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back to Matches
+            </a>
+            <% if (canEditScore && match.status === 'started') { %>
+                <div>
+
+                    <% if (typeof user !== 'undefined' && user && match.user_id.toString() === user.id.toString()) { %>
+                    <button type="button" class="btn-save" style="background: linear-gradient(135deg, #dc2626, #991b1b); box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);" onclick="document.getElementById('statsModal').style.display='flex'">🏁 Finish Match</button>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    let state = {
+        A: { r: <%= tA.r %>, w: <%= tA.w %>, o: <%= tA.o %>, b: <%= tA.b %> },
+        B: { r: <%= tB.r %>, w: <%= tB.w %>, o: <%= tB.o %>, b: <%= tB.b %> }
+    };
+    
+    let delta = {
+        A: { r: 0, w: 0, b: 0 },
+        B: { r: 0, w: 0, b: 0 }
+    };
+
+    let history = { A: [], B: [] };
+
+    let playerStatsDelta = {};
+
+    function addScore(team, runs, wickets, balls, isExtra = false) {
+        let t = state[team];
+        let d = delta[team];
+        
+        let maxWickets = team === 'A' ? <%= teamAPlayers.length || 10 %> : <%= Math.max(teamBPlayers.length, 1) %>;
+        let maxOvers = <%= match.overs || 0 %>;
+
+        if (t.w >= maxWickets && wickets > 0) return; // Already all out
+
+        // Block any delivery once over limit is reached (extras/wides still blocked — inning is done)
+        if (maxOvers > 0 && t.o >= maxOvers) return;
+        
+        // Target chased check (second innings)
+        let otherTeam = team === 'A' ? 'B' : 'A';
+        let otherWickets = otherTeam === 'A' ? <%= teamAPlayers.length || 10 %> : <%= Math.max(teamBPlayers.length, 1) %>;
+        let otherFinished = (maxOvers > 0 && state[otherTeam].o >= maxOvers) || state[otherTeam].w >= otherWickets;
+        if (otherFinished && t.r > state[otherTeam].r) return; // Target already reached
+
+        let oldTotalBalls = t.o * 6 + t.b;
+        
+        let appliedRuns = Math.max(-t.r, runs);
+        let appliedWickets = Math.max(-t.w, Math.min(maxWickets - t.w, wickets));
+        let newTotalBalls = Math.max(0, oldTotalBalls + balls);
+        let appliedBalls = newTotalBalls - oldTotalBalls;
+
+        // Player Tracking
+        const teamLower = team.toLowerCase();
+        let activeBatEl = document.querySelector(`.roster-player.selected-role[data-team="${teamLower}"][data-role="batsman"]`);
+        if (!activeBatEl && (team === 'A' ? <%= teamAPlayerObjs.length %> : <%= teamBPlayerObjs.length %>) === 1) {
+            activeBatEl = document.querySelector(`.roster-player[data-team="${teamLower}"]`);
+        }
+        const activeBatsmanId = activeBatEl?.dataset.pid;
+
+        const bowlingTeam = team === 'A' ? 'B' : 'A';
+        const bowlingTeamLower = bowlingTeam.toLowerCase();
+        let activeBowlEl = document.querySelector(`.roster-player.selected-role[data-team="${bowlingTeamLower}"][data-role="bowler"]`);
+        if (!activeBowlEl && (bowlingTeam === 'A' ? <%= teamAPlayerObjs.length %> : <%= teamBPlayerObjs.length %>) === 1) {
+            activeBowlEl = document.querySelector(`.roster-player[data-team="${bowlingTeamLower}"]`);
+        }
+        const activeBowlerId = activeBowlEl?.dataset.pid;
+
+        let teamBatCount = team === 'A' ? <%= teamAPlayerObjs.length %> : <%= teamBPlayerObjs.length %>;
+        let teamBowlCount = bowlingTeam === 'A' ? <%= teamAPlayerObjs.length %> : <%= teamBPlayerObjs.length %>;
+
+        if (teamBatCount > 0 && !activeBatsmanId) {
+            alert('Please select a batsman first!');
+            return;
+        }
+        if (teamBowlCount > 0 && !activeBowlerId) {
+            alert('Please select a bowler first!');
+            return;
+        }
+
+        let playerDelta = { r: 0, w: 0, b: 0, batId: activeBatsmanId, bowlId: activeBowlerId };
+        
+        if (activeBatsmanId && !isExtra) {
+            if (!playerStatsDelta[activeBatsmanId]) playerStatsDelta[activeBatsmanId] = { runs: 0, wickets: 0, balls_faced: 0 };
+            playerStatsDelta[activeBatsmanId].runs += appliedRuns;
+            playerStatsDelta[activeBatsmanId].balls_faced += appliedBalls;
+            playerDelta.r = appliedRuns;
+            playerDelta.b = appliedBalls;
+            
+            // Update list DOM locally
+            if (activeBatEl) {
+                const rValSpan = activeBatEl.querySelector('.r-val');
+                if (rValSpan) {
+                    const newR = Math.max(0, (parseInt(rValSpan.textContent) || 0) + appliedRuns);
+                    rValSpan.textContent = newR;
+                }
+            }
+        }
+        
+        if (appliedWickets > 0 && activeBowlerId) {
+            if (!playerStatsDelta[activeBowlerId]) playerStatsDelta[activeBowlerId] = { runs: 0, wickets: 0, balls_faced: 0 };
+            playerStatsDelta[activeBowlerId].wickets += appliedWickets;
+            playerDelta.w = appliedWickets;
+            
+            // Update list DOM locally
+            if (activeBowlEl) {
+                const wValSpan = activeBowlEl.querySelector('.w-val');
+                if (wValSpan) {
+                    const newW = Math.max(0, (parseInt(wValSpan.textContent) || 0) + appliedWickets);
+                    wValSpan.textContent = newW;
+                }
+            }
+        }
+
+        // Handle batsman getting out
+        if (appliedWickets > 0 && activeBatsmanId) {
+            // Save out status
+            fetch('/sport/cricket/roles/<%= match.id %>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matchState: { [`player_${activeBatsmanId}_out`]: true } })
+            }).catch(e => console.error(e));
+            
+            // Mark DOM so they can't bat again
+            if (activeBatEl) {
+                activeBatEl.dataset.isOut = "true";
+                activeBatEl.classList.remove('selected-role');
+                activeBatEl.style.border = '1.5px solid rgba(255,255,255,0.08)';
+                activeBatEl.style.background = 'rgba(255,255,255,0.04)';
+                activeBatEl.style.opacity = '0.5';
+                const nameSpan = activeBatEl.querySelector('.roster-name');
+                if (nameSpan) {
+                    nameSpan.style.color = '#cbd5e1';
+                    nameSpan.innerHTML = nameSpan.innerHTML.replace('⚡ STRIKER', '').replace('🏏 STRIKER:', '').trim() + ' <span class="out-badge" style="font-size:0.65rem;background:#ef4444;color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-left:4px;">OUT</span>';
+                }
+                const btn = activeBatEl.querySelector('button');
+                if (btn) btn.style.display = 'none';
+            }
+        }
+
+        history[team].push({ runs: appliedRuns, wickets: appliedWickets, balls: appliedBalls, playerDelta });
+
+        t.r += appliedRuns;
+        t.w += appliedWickets;
+        t.o = Math.floor(newTotalBalls / 6);
+        t.b = newTotalBalls % 6;
+        
+        d.r += appliedRuns;
+        d.w += appliedWickets;
+        d.b += appliedBalls;
+
+        updateUI();
+        saveScoreAtomic();
+    }
+
+    function undoTeam(team) {
+        if (!history[team] || history[team].length === 0) return;
+        let last = history[team].pop();
+        let t = state[team];
+        let d = delta[team];
+        
+        let oldTotalBalls = t.o * 6 + t.b;
+        let newTotalBalls = Math.max(0, oldTotalBalls - last.balls);
+        
+        // Player Tracking Undo
+        if (last.playerDelta) {
+            const pd = last.playerDelta;
+            if (pd.batId && (pd.r !== 0 || pd.b > 0)) {
+                if (!playerStatsDelta[pd.batId]) playerStatsDelta[pd.batId] = { runs: 0, wickets: 0, balls_faced: 0 };
+                playerStatsDelta[pd.batId].runs -= pd.r;
+                playerStatsDelta[pd.batId].balls_faced -= (pd.b || 0);
+                // Update DOM locally
+                const batEl = document.querySelector(`.roster-player[data-pid="${pd.batId}"]`);
+                if (batEl) {
+                    const rValSpan = batEl.querySelector('.r-val');
+                    if (rValSpan) rValSpan.textContent = Math.max(0, (parseInt(rValSpan.textContent) || 0) - pd.r);
+                }
+            }
+            if (pd.w > 0 && pd.bowlId) {
+                if (!playerStatsDelta[pd.bowlId]) playerStatsDelta[pd.bowlId] = { runs: 0, wickets: 0, balls_faced: 0 };
+                playerStatsDelta[pd.bowlId].wickets -= pd.w;
+                // Update DOM locally
+                const bowlEl = document.querySelector(`.roster-player[data-pid="${pd.bowlId}"]`);
+                if (bowlEl) {
+                    const wValSpan = bowlEl.querySelector('.w-val');
+                    if (wValSpan) wValSpan.textContent = Math.max(0, (parseInt(wValSpan.textContent) || 0) - pd.w);
+                }
+            }
+            if (last.wickets > 0 && pd.batId) {
+                // Revert out status
+                fetch('/sport/cricket/roles/<%= match.id %>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ matchState: { [`player_${pd.batId}_out`]: false } })
+                }).catch(e => console.error(e));
+                
+                const batEl = document.querySelector(`.roster-player[data-pid="${pd.batId}"]`);
+                if (batEl) {
+                    batEl.dataset.isOut = "false";
+                    batEl.style.opacity = '1';
+                    const outBadge = batEl.querySelector('.out-badge');
+                    if (outBadge) outBadge.remove();
+                    const btn = batEl.querySelector('button');
+                    if (btn) btn.style.display = 'inline-block';
+                }
+            }
+        }
+
+        t.r = Math.max(0, t.r - last.runs);
+        t.w = Math.max(0, t.w - last.wickets);
+        t.o = Math.floor(newTotalBalls / 6);
+        t.b = newTotalBalls % 6;
+        
+        d.r -= last.runs;
+        d.w -= last.wickets;
+        d.b -= last.balls;
+        
+        updateUI();
+        saveScoreAtomic();
+    }
+
+
+    async function saveScoreAtomic() {
+        const deltaInput = document.getElementById('cricketDeltaInput').value;
+        const playerStatsDeltaStr = JSON.stringify(playerStatsDelta);
+        if (deltaInput === '0,0,0|0,0,0' && playerStatsDeltaStr === '{}') return;
+
+        const formData = new URLSearchParams();
+        formData.append('score', document.getElementById('scoreInput').value);
+        formData.append('cricketDelta', deltaInput);
+        formData.append('playerStatsDelta', playerStatsDeltaStr);
+
+        // Reset deltas locally so the next click sends a new delta
+        delta.A = { r: 0, w: 0, b: 0 };
+        delta.B = { r: 0, w: 0, b: 0 };
+        playerStatsDelta = {};
+        document.getElementById('cricketDeltaInput').value = '0,0,0|0,0,0';
+
+        try {
+            await fetch('/sport/cricket/score/<%= match.id %>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+        } catch (e) {
+            console.error('Failed to auto-save score', e);
+        }
+    }
+
+    function selectPlayer(el) {
+        const team = el.dataset.team;
+        const role = el.dataset.role;
+        const pid = el.dataset.pid;
+        const isOut = el.dataset.isOut === "true";
+
+        if (role === 'batsman' && isOut) {
+            alert("This player is already OUT and cannot bat again!");
+            return;
+        }
+
+        // Deselect current selection for this team+role
+        document.querySelectorAll(`.roster-player[data-team="${team}"][data-role="${role}"]`).forEach(node => {
+            node.classList.remove('selected-role');
+            node.style.border = '1px solid rgba(255,255,255,0.08)';
+            node.style.background = 'rgba(255,255,255,0.04)';
+            node.style.boxShadow = 'none';
+            const ns = node.querySelector('.roster-name');
+            if (ns) {
+                ns.style.color = '#cbd5e1';
+                ns.textContent = ns.textContent
+                    .replace('🏏 Striker: ', '')
+                    .replace('🎾 Bowler: ', '')
+                    .trim();
+            }
+        });
+
+        // Select the clicked player
+        const nameSpan = el.querySelector('.roster-name');
+        el.classList.add('selected-role');
+
+        if (role === 'batsman') {
+            el.style.border = '1px solid #22c55e';
+            el.style.background = 'rgba(34,197,94,0.1)';
+            el.style.boxShadow = '0 0 10px rgba(34,197,94,0.3)';
+            if (nameSpan) {
+                nameSpan.style.color = '#4ade80';
+                nameSpan.textContent = '🏏 Striker: ' + nameSpan.textContent.trim();
+            }
+        } else {
+            el.style.border = '1px solid #f87171';
+            el.style.background = 'rgba(239,68,68,0.08)';
+            el.style.boxShadow = '0 0 10px rgba(239,68,68,0.3)';
+            if (nameSpan) {
+                nameSpan.style.color = '#f87171';
+                nameSpan.textContent = '🎾 Bowler: ' + nameSpan.textContent.trim();
+            }
+        }
+
+        // Save to backend match_state
+        const matchState = {};
+        matchState[`team_${team}_${role}`] = pid;
+        fetch('/sport/cricket/roles/<%= match.id %>', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ matchState })
+        }).catch(err => console.error("Failed to save role", err));
+    }
+
+    let scoreChart;
+    function initChart() {
+        const ctx = document.getElementById('scoreChart').getContext('2d');
+        
+        // Setup gradients
+        const gradA = ctx.createLinearGradient(0, 0, 0, 400);
+        gradA.addColorStop(0, 'rgba(59, 130, 246, 0.8)'); // Blue
+        gradA.addColorStop(1, 'rgba(37, 99, 235, 0.2)');
+
+        const gradB = ctx.createLinearGradient(0, 0, 0, 400);
+        gradB.addColorStop(0, 'rgba(234, 179, 8, 0.8)'); // Yellow/Gold
+        gradB.addColorStop(1, 'rgba(202, 138, 4, 0.2)');
+
+        scoreChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Team A', 'Team B'],
+                datasets: [{
+                    label: 'Total Runs',
+                    data: [state.A.r, state.B.r],
+                    backgroundColor: [gradA, gradB],
+                    borderColor: ['#3b82f6', '#eab308'],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    barThickness: 60
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleFont: { size: 14, family: 'Inter' },
+                        bodyFont: { size: 16, weight: 'bold', family: 'Inter' },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + ' Runs';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', drawBorder: false },
+                        ticks: { color: '#94a3b8', font: { family: 'Inter', weight: '600' } }
+                    },
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { color: '#f8fafc', font: { family: 'Inter', size: 14, weight: 'bold' } }
+                    }
+                },
+                animation: {
+                    duration: 500,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+
+    function updateUI() {
+        document.getElementById('scoreA').innerText = `${state.A.r}/${state.A.w}`;
+        document.getElementById('oversA').innerText = `${state.A.o}.${state.A.b}`;
+        
+        document.getElementById('scoreB').innerText = `${state.B.r}/${state.B.w}`;
+        document.getElementById('oversB').innerText = `${state.B.o}.${state.B.b}`;
+        
+        const formatScore = (s) => `${s.r}/${s.w} (${s.o}.${s.b})`;
+        const fullScore = `${formatScore(state.A)} - ${formatScore(state.B)}`;
+        
+        document.getElementById('scoreInput').value = fullScore;
+        document.getElementById('cricketDeltaInput').value = `${delta.A.r},${delta.A.w},${delta.A.b}|${delta.B.r},${delta.B.w},${delta.B.b}`;
+        
+        const maxOvers = <%= match.overs || 0 %>;
+        let maxWicketsA = <%= teamAPlayers.length || 10 %>;
+        let maxWicketsB = <%= Math.max(teamBPlayers.length, 1) %>;
+
+        const teamA_Finished = (maxOvers > 0 && state.A.o >= maxOvers) || state.A.w >= maxWicketsA;
+        const teamB_Finished = (maxOvers > 0 && state.B.o >= maxOvers) || state.B.w >= maxWicketsB;
+
+        const targetReachedA = teamB_Finished && state.A.r > state.B.r;
+        const targetReachedB = teamA_Finished && state.B.r > state.A.r;
+
+        // Team A controls
+        const inningsOverA = teamA_Finished || targetReachedA;
+        let controlsA = document.getElementById('controlsA');
+        if (controlsA) {
+            controlsA.querySelectorAll('button').forEach(b => {
+                const isUndo = b.classList.contains('btn-minus');
+                b.disabled = inningsOverA && !isUndo;
+                b.style.opacity = (inningsOverA && !isUndo) ? '0.35' : '1';
+            });
+            // Show/hide innings-over banner for Team A
+            let bannerA = document.getElementById('inningsOverBannerA');
+            if (inningsOverA) {
+                if (!bannerA) {
+                    bannerA = document.createElement('div');
+                    bannerA.id = 'inningsOverBannerA';
+                    bannerA.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid #ef4444;border-radius:8px;padding:8px 16px;text-align:center;color:#f87171;font-weight:800;font-size:0.9rem;margin-top:8px;';
+                    controlsA.after(bannerA);
+                }
+                if (targetReachedA) bannerA.innerHTML = '🏆 Target Reached! Team A Wins.';
+                else if (teamB_Finished && state.A.r < state.B.r && teamA_Finished) bannerA.innerHTML = `❌ Innings Complete. Team B Wins by ${state.B.r - state.A.r} runs.`;
+                else if (teamB_Finished && state.A.r === state.B.r && teamA_Finished) bannerA.innerHTML = `🤝 Match Tied!`;
+                else if (state.A.w >= maxWicketsA) bannerA.innerHTML = '🏏 All Out! Innings Complete.';
+                else bannerA.innerHTML = `⏱️ ${maxOvers} Overs Complete — Innings Over!`;
+            } else if (bannerA) {
+                bannerA.remove();
+            }
+        }
+        
+        // Team B controls
+        const inningsOverB = teamB_Finished || targetReachedB;
+        let controlsB = document.getElementById('controlsB');
+        if (controlsB) {
+            controlsB.querySelectorAll('button').forEach(b => {
+                const isUndo = b.classList.contains('btn-minus');
+                b.disabled = inningsOverB && !isUndo;
+                b.style.opacity = (inningsOverB && !isUndo) ? '0.35' : '1';
+            });
+            // Show/hide innings-over banner for Team B
+            let bannerB = document.getElementById('inningsOverBannerB');
+            if (inningsOverB) {
+                if (!bannerB) {
+                    bannerB = document.createElement('div');
+                    bannerB.id = 'inningsOverBannerB';
+                    bannerB.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid #ef4444;border-radius:8px;padding:8px 16px;text-align:center;color:#f87171;font-weight:800;font-size:0.9rem;margin-top:8px;';
+                    controlsB.after(bannerB);
+                }
+                if (targetReachedB) bannerB.innerHTML = '🏆 Target Reached! Team B Wins.';
+                else if (teamA_Finished && state.B.r < state.A.r && teamB_Finished) bannerB.innerHTML = `❌ Innings Complete. Team A Wins by ${state.A.r - state.B.r} runs.`;
+                else if (teamA_Finished && state.B.r === state.A.r && teamB_Finished) bannerB.innerHTML = `🤝 Match Tied!`;
+                else if (state.B.w >= maxWicketsB) bannerB.innerHTML = '🏏 All Out! Innings Complete.';
+                else bannerB.innerHTML = `⏱️ ${maxOvers} Overs Complete — Innings Over!`;
+            } else if (bannerB) {
+                bannerB.remove();
+            }
+        }
+
+
+        // Update Chart
+        if (scoreChart) {
+            scoreChart.data.datasets[0].data = [state.A.r, state.B.r];
+            scoreChart.update();
+        }
+
+        // Auto-show finish modal when match is completely over
+        <% if (typeof user !== 'undefined' && user && match.user_id.toString() === user.id.toString() && match.status === 'started') { %>
+        if ((inningsOverA && inningsOverB) || targetReachedA || targetReachedB) {
+            if (!window.hasAutoFinished) {
+                window.hasAutoFinished = true;
+                setTimeout(() => {
+                    const modal = document.getElementById('statsModal');
+                    if (modal) modal.style.display = 'flex';
+                }, 1500);
+            }
+        }
+        <% } %>
+    }
+    
+    // Initial UI update to disable if already all out and initialize chart
+    window.onload = function() {
+        initChart();
+        updateUI();
+    };
+
+    async function saveRoles() {
+        const selects = document.querySelectorAll('.role-select');
+        const matchState = {};
+        let needsReload = false;
+        selects.forEach(s => {
+            if (s.value) {
+                if (s.dataset.role === 'batting_team') {
+                    matchState['batting_team'] = s.value;
+                    needsReload = true; // Reload page to update UI
+                } else {
+                    const key = `team_${s.dataset.team}_${s.dataset.role}`;
+                    matchState[key] = s.value;
+                }
+            }
+        });
+
+        try {
+            await fetch('/sport/cricket/roles/<%= match.id %>', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ matchState })
+            });
+            if (needsReload) window.location.reload();
+        } catch (err) {
+            console.error("Failed to save roles", err);
+        }
+    }
+</script>
+
+<!-- Post-Match Stats Modal -->
+<div id="statsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; border:1px solid #334155; border-radius:16px; padding:2rem; width:90%; max-width:600px; max-height:80vh; overflow-y:auto;">
+        <h2 style="color:#f8fafc; margin-top:0;">Post-Match Player Stats</h2>
+        <p style="color:#94a3b8;">Review the runs and wickets tracked during the match. Click Save to update player profiles.</p>
+        
+        <form action="/sport/cricket/player-stats/<%= match.id %>" method="POST">
+            
+            <h3 style="color:#3b82f6;">Team A Players</h3>
+            <% if (typeof teamAPlayerObjs !== 'undefined') { teamAPlayerObjs.forEach(p => { 
+                let pr = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id].runs : 0;
+                let pw = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id].wickets : 0;
+            %>
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px;">
+                    <label style="color:#f8fafc; flex-grow: 1; font-weight: bold;"><%= p.name %></label>
+                    <input type="hidden" name="playerRuns[user_<%= p.id %>]" value="<%= pr %>">
+                    <input type="hidden" name="playerWickets[user_<%= p.id %>]" value="<%= pw %>">
+                    <div style="display: flex; gap: 1rem;">
+                        <span style="color: #4ade80; font-weight: 800;"><%= pr %> Runs</span>
+                        <span style="color: #60a5fa; font-weight: 800;"><%= pw %> Wkts</span>
+                    </div>
+                </div>
+            <% }) } %>
+
+            <h3 style="color:#eab308; margin-top:1.5rem;">Team B Players</h3>
+            <% if (typeof teamBPlayerObjs !== 'undefined') { teamBPlayerObjs.forEach(p => { 
+                let pr = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id].runs : 0;
+                let pw = matchState.player_stats && matchState.player_stats[p.id] ? matchState.player_stats[p.id].wickets : 0;
+            %>
+                <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:center; gap: 0.5rem; background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 8px;">
+                    <label style="color:#f8fafc; flex-grow: 1; font-weight: bold;"><%= p.name %></label>
+                    <input type="hidden" name="playerRuns[user_<%= p.id %>]" value="<%= pr %>">
+                    <input type="hidden" name="playerWickets[user_<%= p.id %>]" value="<%= pw %>">
+                    <div style="display: flex; gap: 1rem;">
+                        <span style="color: #4ade80; font-weight: 800;"><%= pr %> Runs</span>
+                        <span style="color: #60a5fa; font-weight: 800;"><%= pw %> Wkts</span>
+                    </div>
+                </div>
+            <% }) } %>
+
+            <div style="display:flex; gap:1rem; margin-top:2rem;">
+                <button type="button" class="btn-back" onclick="document.getElementById('statsModal').style.display='none'" style="flex:1; justify-content:center; background:#334155; color:white; border:none; padding:1rem; border-radius:8px; cursor:pointer;">Cancel</button>
+                <button type="submit" class="btn-save" style="flex:2;">Save & Finish Match</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<% if (isFinished) { 
+    let winnerText = 'Match Finished!';
+    if (tA.r > tB.r) winnerText = '🏆 Team A Won 🏆';
+    else if (tB.r > tA.r) winnerText = '🏆 Team B Won 🏆';
+    else winnerText = '🤝 Match Drawn 🤝';
+%>
+<div id="matchFinishedModal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index:9999;">
+    <div style="text-align: center; padding: 3rem 2rem; background: linear-gradient(135deg, #ffffff, #f0fdf4); border: 2px solid #22c55e; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); width: 90%; max-width: 500px;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+        <h2 style="font-size: 2.2rem; font-weight: 900; color: #16a34a; margin-bottom: 0.5rem;">Match Played!</h2>
+        <div style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 1.5rem;"><%= match.team_name %></div>
+        
+        <div style="background: white; border: 2px solid #bbf7d0; border-radius: 20px; padding: 2rem 1.5rem; margin-bottom: 2.5rem; box-shadow: 0 10px 30px rgba(34, 197, 94, 0.15);">
+            <div style="font-size: 1rem; font-weight: 800; color: #64748b; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 2px;">Final Score</div>
+            <div style="font-size: 2.5rem; font-weight: 900; color: #15803d; line-height: 1.2;"><%= tA.r %>/<%= tA.w %> - <%= tB.r %>/<%= tB.w %></div>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-top: 1.5rem;"><%= winnerText %></div>
+        </div>
+
+        <button onclick="document.getElementById('matchFinishedModal').style.display='none'" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 1.2rem 3.5rem; font-size: 1.15rem; font-weight: 800; border-radius: 50px; cursor: pointer; box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4); transition: transform 0.2s;">
+            Awesome!
+        </button>
+    </div>
+</div>
+<% } %>
+
+<%- include('layout/footer') %>

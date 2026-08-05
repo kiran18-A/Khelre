@@ -1,0 +1,87 @@
+    </main>
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2026 Khel Re. All rights reserved.</p>
+        </div>
+        
+        <!-- Global Toast Notification System -->
+        <div id="global-toast" class="toast-hidden">
+            <div class="toast-icon" id="toast-icon">✨</div>
+            <div class="toast-message" id="toast-message">Notification</div>
+        </div>
+
+        <style>
+            #global-toast {
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                background: rgba(15, 23, 42, 0.9);
+                backdrop-filter: blur(12px);
+                border-left: 4px solid #3b82f6;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                z-index: 10000;
+                transform: translateX(120%);
+                transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                font-family: inherit;
+            }
+            #global-toast.toast-show {
+                transform: translateX(0);
+            }
+            #global-toast.toast-error {
+                border-left-color: #ef4444;
+            }
+            #global-toast.toast-success {
+                border-left-color: #22c55e;
+            }
+            .toast-icon {
+                font-size: 1.5rem;
+            }
+            .toast-message {
+                font-weight: 600;
+                font-size: 1rem;
+            }
+        </style>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const msg = urlParams.get('msg');
+                const type = urlParams.get('type') || 'success';
+                
+                if (msg) {
+                    const toast = document.getElementById('global-toast');
+                    const toastIcon = document.getElementById('toast-icon');
+                    const toastMessage = document.getElementById('toast-message');
+                    
+                    toastMessage.textContent = msg;
+                    if (type === 'error') {
+                        toast.classList.add('toast-error');
+                        toastIcon.textContent = '⚠️';
+                    } else {
+                        toast.classList.add('toast-success');
+                        toastIcon.textContent = '✅';
+                    }
+                    
+                    // Show toast
+                    toast.classList.add('toast-show');
+                    
+                    // Hide toast after 4 seconds
+                    setTimeout(() => {
+                        toast.classList.remove('toast-show');
+                    }, 4000);
+                    
+                    // Clean URL without refreshing
+                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                }
+            });
+        </script>
+    </footer>
+</body>
+</html>

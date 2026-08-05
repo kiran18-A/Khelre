@@ -1,0 +1,1100 @@
+<%- include('layout/header') %>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<link rel="stylesheet" href="/css/sport.css?v=<%= Date.now() %>">
+
+<%
+  /* Sport-specific config for themed elements */
+  const sportConfig = {
+    cricket:   { icon:'🏏', ball:'🔴', color:'#15803d', tagLine:'Play · Bat · Bowl · Win', bg:'#f0fdf4' },
+    badminton: { icon:'🏸', ball:'🟡', color:'#1d4ed8', tagLine:'Rally · Smash · Dominate', bg:'#eff6ff' }
+  };
+  const sc = sportConfig[sportName.toLowerCase()] || sportConfig.cricket;
+%>
+
+<style>
+  .location-suggestions {
+    width: 100%;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #e2e8f0;
+  }
+  .suggestion-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #1e293b;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+  }
+  .suggestion-item:last-child { border-bottom: none; }
+  .suggestion-item:hover { background: #f8fafc; color: var(--sport-theme-color); font-weight: 600; }
+  body { 
+    --sport-theme-color: <%= sc.color %>;
+    --sport-theme-bg: <%= sc.bg %>;
+    background: <%= sc.bg %> !important; 
+  }
+</style>
+
+<!-- ═══════════════════════════════════════════════════════════
+     GENERIC SPORT HERO — Unified Theme for All Sports
+════════════════════════════════════════════════════════════ -->
+<script>document.body.classList.add('sport-<%= sportName.toLowerCase() %>');</script>
+<div class="sport-hero">
+    <!-- Abstract pattern background -->
+    <div class="sport-hero-bg" style="background-color: <%= sc.color %>">
+        <div class="sport-hero-pattern"></div>
+    </div>
+    
+    <!-- Hero content -->
+    <div class="sport-hero-content">
+        <div class="sport-hero-text">
+            <div class="sport-tag"><%= sc.icon %> &nbsp;<%= sportName.charAt(0).toUpperCase() + sportName.slice(1) %> &nbsp;·&nbsp; Live Matchmaking</div>
+            <h1 class="sport-hero-title">
+                Find Your<br>
+                <span class="highlight"><%= sportName.charAt(0).toUpperCase() + sportName.slice(1) %> Squad</span>
+            </h1>
+            <p class="sport-hero-sub"><%= sc.tagLine %></p>
+            
+            <% if (typeof matches !== 'undefined' && matches) { %>
+            <div class="hero-stats">
+                <div class="hero-stat-pill">🏟️ &nbsp;<%= matches.length %> Match<%= matches.length !== 1 ? 'es' : '' %></div>
+                <div class="hero-stat-pill">👥 &nbsp;<%= matches.reduce((s,m) => s+(m.players_needed||0),0) %> Spots Open</div>
+                <div class="hero-stat-pill"><%= sc.ball %> &nbsp;<%= matches.filter(m=>m.status==='started').length %> Live Now</div>
+                <% if (sportName.toLowerCase() === 'cricket' && typeof user !== 'undefined' && user) { 
+                    let runs = (typeof currentUserProfile !== 'undefined' && currentUserProfile) ? currentUserProfile.total_runs : 0;
+                    let wkts = (typeof currentUserProfile !== 'undefined' && currentUserProfile) ? currentUserProfile.total_wickets : 0;
+                %>
+                    <div class="hero-stat-pill" style="background: rgba(255, 255, 255, 0.2); border-color: rgba(255,255,255,0.4); font-weight: 800;">
+                        ⭐ &nbsp;<%= runs %> Runs | <%= wkts || 0 %> Wkts
+                    </div>
+                <% } %>
+            </div>
+            <% } %>
+        </div>
+        
+        <div class="sport-hero-actions">
+            <a href="/" class="btn-hero-back">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back
+            </a>
+            <% if (typeof user !== 'undefined' && user) { %>
+                <button class="btn-hero-new" onclick="openNewGameModal()" style="background: <%= sc.color %>; box-shadow: 0 4px 20px <%= sc.color %>80;"><%= sc.icon %> &nbsp;Post a Game</button>
+            <% } else { %>
+                <button class="btn-hero-new" onclick="openAuthModal()" style="background: <%= sc.color %>; box-shadow: 0 4px 20px <%= sc.color %>80;">🔐 &nbsp;Login to Play</button>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MATCHES
+════════════════════════════════════════════════════════════ -->
+
+<% if (sportName.toLowerCase() === 'cricket' && ((typeof topPlayers !== 'undefined' && topPlayers.length > 0) || (typeof currentUserProfile !== 'undefined' && currentUserProfile))) { %>
+<div class="matches-section" style="padding-bottom: 0;">
+    <div class="section-heading">
+        <div class="section-heading-text">🏏 Cricket Stats</div>
+        <div class="section-heading-line"></div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+
+        <!-- MY PROFILE CARD -->
+        <% if (typeof currentUserProfile !== 'undefined' && currentUserProfile) { 
+            let liveRuns = currentUserProfile.current_match_id ? currentUserProfile.current_match_runs : null;
+            let liveWkts = currentUserProfile.current_match_id ? currentUserProfile.current_match_wickets : null;
+            let avgRuns = currentUserProfile.matches_played > 0 ? (currentUserProfile.total_runs / currentUserProfile.matches_played).toFixed(1) : '—';
+            let history = currentUserProfile.match_history || [];
+        %>
+        <div style="background: linear-gradient(135deg, #0f172a 60%, #1e3a5f); border:1px solid #1e3a5f; border-radius:20px; padding:1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.15);">
+            <!-- Profile Header -->
+            <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.2rem;">
+                <div style="width:50px; height:50px; background:linear-gradient(135deg,#3b82f6,#1d4ed8); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">🏏</div>
+                <div>
+                    <div style="font-size:1.2rem; font-weight:900; color:white;"><%= user.name %></div>
+                    <div style="font-size:0.8rem; color:#64748b; font-weight:600;"><%= currentUserProfile.matches_played %> matches played</div>
+                </div>
+                <% if (liveRuns !== null) { %>
+                <div style="margin-left:auto; background:rgba(34,197,94,0.15); border:1px solid #22c55e; border-radius:10px; padding:0.5rem 0.8rem; text-align:center;">
+                    <div style="font-size:0.65rem; color:#4ade80; font-weight:800; text-transform:uppercase;">🔴 LIVE</div>
+                    <div style="font-size:1.2rem; font-weight:900; color:#4ade80;"><%= liveRuns %>R</div>
+                    <div style="font-size:0.7rem; color:#64748b;"><%= liveWkts %>W</div>
+                </div>
+                <% } %>
+            </div>
+
+            <!-- 3 Stat Tiles -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.6rem; margin-bottom:1.2rem;">
+                <div style="background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:12px; padding:0.8rem; text-align:center;">
+                    <div style="font-size:0.65rem; color:#4ade80; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Career Runs</div>
+                    <div style="font-size:1.8rem; font-weight:900; color:white; line-height:1.1;"><%= currentUserProfile.total_runs %></div>
+                    <div style="font-size:0.65rem; color:#64748b;">HS: <%= currentUserProfile.highest_score %></div>
+                </div>
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:0.8rem; text-align:center;">
+                    <div style="font-size:0.65rem; color:#f87171; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Career Wkts</div>
+                    <div style="font-size:1.8rem; font-weight:900; color:white; line-height:1.1;"><%= currentUserProfile.total_wickets || 0 %></div>
+                    <div style="font-size:0.65rem; color:#64748b;">Avg: <%= avgRuns %></div>
+                </div>
+                <div style="background:rgba(234,179,8,0.1); border:1px solid rgba(234,179,8,0.3); border-radius:12px; padding:0.8rem; text-align:center;">
+                    <div style="font-size:0.65rem; color:#facc15; font-weight:800; text-transform:uppercase; letter-spacing:1px;">Last Match</div>
+                    <div style="font-size:1.3rem; font-weight:900; color:white; line-height:1.1;"><%= currentUserProfile.last_match_runs %>R</div>
+                    <div style="font-size:0.65rem; color:#64748b;"><%= currentUserProfile.last_match_wickets || 0 %>W</div>
+                </div>
+            </div>
+
+            <!-- Match History -->
+            <% if (history.length > 0) { %>
+            <div>
+                <div style="font-size:0.75rem; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:1px; margin-bottom:0.5rem;">Recent Matches</div>
+                <div style="display:flex; flex-direction:column; gap:0.35rem;">
+                    <% history.forEach((h, i) => { %>
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border-radius:8px; padding:0.5rem 0.8rem;">
+                        <div style="font-size:0.8rem; color:#94a3b8; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:55%;"><%= h.team_name %></div>
+                        <div style="display:flex; gap:0.8rem; flex-shrink:0;">
+                            <span style="font-size:0.8rem; font-weight:800; color:<%= h.runs >= 50 ? '#facc15' : 'white' %>;"><%= h.runs %>R</span>
+                            <% if (h.wickets > 0) { %><span style="font-size:0.8rem; color:#f87171;"><%= h.wickets %>W</span><% } %>
+                            <% if (h.balls_faced > 0) { %><span style="font-size:0.75rem; color:#64748b;">SR: <%= ((h.runs/h.balls_faced)*100).toFixed(0) %></span><% } %>
+                        </div>
+                    </div>
+                    <% }) %>
+                </div>
+            </div>
+            <% } else { %>
+            <div style="text-align:center; color:#475569; font-size:0.85rem; padding:0.5rem;">No match history yet. Play your first match!</div>
+            <% } %>
+        </div>
+        <% } %>
+
+        <!-- LEADERBOARD -->
+        <% if (typeof topPlayers !== 'undefined' && topPlayers.length > 0) { %>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:20px; padding:1.5rem; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+            <div style="font-size:1rem; font-weight:800; color:#0f172a; margin-bottom:1rem;">🏆 Top Batsmen</div>
+            <div style="display:flex; flex-direction:column; gap:0.4rem;">
+                <% topPlayers.forEach((tp, index) => { 
+                    let medals = ['🥇','🥈','🥉'];
+                    let medal = medals[index] || `#${index+1}`;
+                    let avgR = tp.matches_played > 0 ? (tp.total_runs / tp.matches_played).toFixed(1) : '—';
+                %>
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:0.7rem 0.8rem; background:<%= index===0?'#fef3c7':index===1?'#f1f5f9':index===2?'#fef9f0':'#f8fafc' %>; border-radius:10px; border:1px solid <%= index===0?'#fde68a':index===1?'#e2e8f0':index===2?'#fed7aa':'#e2e8f0' %>;">
+                    <div style="display:flex; align-items:center; gap:0.6rem; min-width:0;">
+                        <span style="font-size:1.1rem; flex-shrink:0;"><%= medal %></span>
+                        <span style="font-weight:800; color:#0f172a; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= tp.name %></span>
+                    </div>
+                    <div style="display:flex; gap:0.8rem; align-items:center; flex-shrink:0;">
+                        <span style="font-size:0.75rem; color:#64748b;">HS: <strong><%= tp.highest_score || 0 %></strong></span>
+                        <span style="font-size:0.75rem; color:#64748b;">Avg: <strong><%= avgR %></strong></span>
+                        <span style="font-weight:900; color:<%= index===0?'#b45309':'#15803d' %>; font-size:0.9rem;"><%= tp.total_runs %>R / <%= tp.total_wickets || 0 %>W</span>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+        </div>
+        <% } %>
+    </div>
+</div>
+<% } %>
+
+
+
+<div class="matches-section">
+    <div class="section-heading">
+        <div class="section-heading-text">Match Feed</div>
+        <div class="section-heading-line"></div>
+        <% if (typeof matches !== 'undefined' && matches) { %>
+            <span style="font-size:0.75rem;font-weight:700;color:#94a3b8;flex-shrink:0;"><%= matches.length %> posted</span>
+        <% } %>
+    </div>
+
+    <div class="match-filters">
+        <button class="filter-btn active" data-filter="all">All Matches</button>
+        <button class="filter-btn" data-filter="nearby-3">📍 Near Me (3km)</button>
+        <button class="filter-btn" data-filter="nearby-5">📍 Near Me (5km)</button>
+        <button class="filter-btn" data-filter="nearby-10">📍 Near Me (10km)</button>
+        <button class="filter-btn" data-filter="open">Open</button>
+        <button class="filter-btn" data-filter="started">Live</button>
+        <button class="filter-btn" data-filter="finished">Finished</button>
+    </div>
+
+    <div class="matches-grid">
+
+        <% if (typeof matches !== 'undefined' && matches && matches.length > 0) { %>
+            <% matches.forEach(match => {
+                const isStarted   = match.status === 'started';
+                const isFinished  = match.status === 'finished' || match.status === 'played';
+                const isTimeout   = match.status === 'timeout';
+                const isHost      = typeof user !== 'undefined' && user && match.user_id.toString() === user.id.toString();
+                const isJoined    = typeof joinedMatchIds !== 'undefined' && joinedMatchIds.includes(match.id.toString());
+                const canEditScore= typeof user !== 'undefined' && user && (isHost || isJoined);
+                const squadPlayers= matchPlayersMap[match.id] || [];
+            %>
+
+            <% 
+                let matchLat = '', matchLng = '';
+                if (match.google_maps_link) {
+                    const qMatch = match.google_maps_link.match(/q=([\d.-]+),([\d.-]+)/);
+                    if (qMatch) {
+                        matchLat = qMatch[1];
+                        matchLng = qMatch[2];
+                    }
+                }
+            %>
+            <!-- ─── Match Card ─── -->
+            <div class="match-card <%= isStarted ? 'is-started' : '' %>" data-lat="<%= matchLat %>" data-lng="<%= matchLng %>">
+
+                <!-- Top section -->
+                <div class="match-card-top">
+                    <div class="match-card-info">
+                        <% if (isStarted) { %>
+                            <span class="status-badge started"><span class="status-dot"></span> Live · Started</span>
+                        <% } else if (isFinished) { %>
+                            <span class="status-badge" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569;"><span class="status-dot" style="background:#64748b;"></span> Closed · Finished</span>
+                        <% } else if (isTimeout) { %>
+                            <span class="status-badge" style="background:#fef2f2; border:1px solid #fca5a5; color:#ef4444;"><span class="status-dot" style="background:#dc2626;"></span> Match Timeout</span>
+                        <% } else if (match.players_needed <= 0) { %>
+                            <span class="status-badge" style="background:#fefce8; border:1px solid #fde047; color:#854d0e;"><span class="status-dot" style="background:#eab308;"></span> Closed · Full</span>
+                        <% } else { %>
+                            <span class="status-badge open"><span class="status-dot"></span> Open · Recruiting</span>
+                        <% } %>
+                        <div class="match-team-name" title="<%= match.team_name %>"><%= match.team_name %></div>
+                        <div class="match-host">Hosted by <strong><%= match.host_name || 'Anonymous' %></strong></div>
+                    </div>
+                    <!-- Players needed as cricket ball -->
+                    <div class="players-pill" title="Players still needed">
+                        <div class="players-pill-label">Need</div>
+                        <div class="players-pill-count"><%= match.players_needed %></div>
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="match-details">
+                    <div class="match-detail-row">
+                        <span class="icon">📍</span>
+                        <% if (match.google_maps_link) { %>
+                            <a href="<%= match.google_maps_link %>" target="_blank"><%= match.location || 'View on Map' %></a>
+                        <% } else { %>
+                            <span><%= match.location || 'Location TBD' %></span>
+                        <% } %>
+                    </div>
+                    <div class="match-detail-row">
+                        <span class="icon">📅</span>
+                        <span><%= new Date(match.match_date).toLocaleDateString('en-IN', { weekday:'short', month:'short', day:'numeric' }) %> &nbsp;·&nbsp; <%= match.match_time %></span>
+                    </div>
+                    <div class="match-detail-row">
+                        <span class="icon">👥</span>
+                        <span><%= squadPlayers.length + 1 %> player<%= (squadPlayers.length + 1 !== 1) ? 's' : '' %> in squad</span>
+                    </div>
+                    <% if (sportName.toLowerCase() === 'cricket' && match.overs) { %>
+                    <div class="match-detail-row">
+                        <span class="icon">🏏</span>
+                        <span><%= match.overs %> Overs Match</span>
+                    </div>
+                    <% } %>
+
+                    <% if (isStarted || isFinished) { %>
+                    <% 
+                        let winnerText = isFinished ? 'Final Score:' : 'Live Score:';
+                        if (isFinished && match.score) {
+                            const parts = match.score.split('-');
+                            if (parts.length === 2) {
+                                const scoreA = parseInt(parts[0].trim());
+                                const scoreB = parseInt(parts[1].trim());
+                                if (!isNaN(scoreA) && !isNaN(scoreB)) {
+                                    if (scoreA > scoreB) winnerText = 'Team A Won:';
+                                    else if (scoreB > scoreA) winnerText = 'Team B Won:';
+                                    else winnerText = 'Match Drawn:';
+                                }
+                            }
+                        }
+                    %>
+                    <div class="match-detail-row score-detail-row" style="margin-top: 0.35rem; padding-top: 0.5rem; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span class="icon">🏆</span>
+                            <span style="font-weight: 700; color: #1e293b;"><%= winnerText %> <span style="color: var(--sport-theme-color, #15803d); font-size: 1.05rem; font-weight: 900; margin-left: 0.35rem;"><%= match.score || '0 - 0' %></span></span>
+                        </div>
+                        <% if (isStarted || isFinished) { %>
+                            <a href="/sport/<%= sportName.toLowerCase() %>/scorecard/<%= match.id %>" class="btn-score-board" style="display:inline-flex; align-items:center; gap:0.35rem; background: #0066CC; color: white; padding: 0.3rem 0.85rem; border-radius: 50px; text-decoration: none; font-weight: 800; font-size: 0.78rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='none'">🏆 Scoreboard</a>
+                        <% } %>
+                    </div>
+                    <% } %>
+                </div>
+
+                <!-- Action Buttons -->
+                <% const showRateBtn = (isFinished && typeof user !== 'undefined' && user && (match.user_id.toString() === user.id.toString() || joinedMatchIds.includes(match.id.toString()))); %>
+                <div class="match-card-actions">
+                    <% if (!isTimeout) { %>
+                    <button class="btn-view-team" onclick="document.getElementById('teamModal<%= match.id %>').style.display='flex'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                        View Squad
+                    </button>
+                    <% } %>
+
+                    <div class="btn-action-wrapper<%= showRateBtn ? ' has-rate-btn' : '' %>">
+                        <% if (isTimeout) { %>
+                            <div class="btn-disabled" style="background:#fef2f2; color:#ef4444; border:1px solid #fca5a5;">⏳ Timed Out</div>
+                        <% } else if (isFinished) { %>
+                            <div class="btn-finished-group">
+                                <div class="btn-finished">🏁 Finished</div>
+                                <% if (showRateBtn) { %>
+                                    <button class="btn-rate" onclick="document.getElementById('ratingModal<%= match.id %>').style.display='flex'">⭐ Rate</button>
+                                <% } %>
+                            </div>
+                        <% } else if (typeof user !== 'undefined' && user) { %>
+                            <% if (isHost) { %>
+                                <% if (isStarted) { %>
+                                    <div class="btn-joined">🏏 Your Match</div>
+                                <% } else { %>
+                                    <div style="display:flex; gap:0.5rem; width:100%;">
+                                        <% if (!isJoined && match.players_needed > 0) { %>
+                                            <form action="/sport/<%= sportName.toLowerCase() %>/join/<%= match.id %>" method="POST" style="flex:1;">
+                                                <button type="submit" class="btn-join" style="width:100%; padding: 0.6rem; font-size: 0.8rem;">✋ Join</button>
+                                            </form>
+                                        <% } else if (isJoined) { %>
+                                            <div class="btn-joined" style="flex:1; display:flex; justify-content:center; align-items:center; font-size: 0.8rem;">✅ Joined</div>
+                                        <% } %>
+                                        <button type="button" class="btn-join" onclick="const p = prompt('Enter new TOTAL capacity (e.g., 22 for 11v11):', '22'); if(p && !isNaN(p)) { document.getElementById('capForm<%= match.id %>').elements['capacity'].value = p; document.getElementById('capForm<%= match.id %>').submit(); }" style="flex:1; padding: 0.6rem; font-size: 0.8rem; background: #64748b; color: white;">✏️ Size</button>
+                                        <form id="capForm<%= match.id %>" action="/sport/<%= sportName.toLowerCase() %>/edit-capacity/<%= match.id %>" method="POST" style="display:none;"><input type="hidden" name="capacity" value=""></form>
+                                        <form action="/sport/<%= sportName.toLowerCase() %>/start/<%= match.id %>" method="POST" style="flex:1;">
+                                            <button type="submit" class="btn-start-match" style="width:100%; padding: 0.6rem; font-size: 0.8rem;">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                                Start Match
+                                            </button>
+                                        </form>
+                                    </div>
+                                <% } %>
+                            <% } else if (isStarted) { %>
+                                <div class="btn-disabled">🔴 In Progress</div>
+                            <% } else if (isJoined) { %>
+                                <div class="btn-joined">✅ Joined</div>
+                            <% } else if (match.players_needed > 0) { %>
+                                <form action="/sport/<%= sportName.toLowerCase() %>/join/<%= match.id %>" method="POST">
+                                    <button type="submit" class="btn-join">Join Team →</button>
+                                </form>
+                            <% } else { %>
+                                <div class="btn-disabled">🔒 Full</div>
+                            <% } %>
+                        <% } else { %>
+                            <% if (isStarted) { %>
+                                <div class="btn-disabled">🔴 In Progress</div>
+                            <% } else { %>
+                                <button class="btn-login-join" onclick="openAuthModal()">🔐 Login to Join</button>
+                            <% } %>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── Team Info Modal ─── -->
+            <div id="teamModal<%= match.id %>" class="team-modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+                <div class="team-modal-box">
+                    <div class="team-modal-header">
+                        <div style="position:relative;z-index:1;">
+                            <div class="team-modal-name"><%= match.team_name %></div>
+                            <div class="team-modal-host">
+                                Hosted by <strong><%= match.host_name || 'Anonymous' %></strong>
+                                &nbsp;·&nbsp;
+                                <% if (isStarted) { %><span style="color:#15803d;">🟢 Live</span>
+                                <% } else { %><span style="color:#dc2626;">🔴 Recruiting</span><% } %>
+                            </div>
+                            <% if (isStarted) { %>
+                                <div class="score-in-modal">
+                                    <span>Score</span>
+                                    <span><%= match.score || '0 - 0' %></span>
+                                </div>
+                            <% } %>
+                        </div>
+                        <button class="team-modal-close" onclick="document.getElementById('teamModal<%= match.id %>').style.display='none'">✕</button>
+                    </div>
+
+                    <div class="team-modal-body">
+                        <div class="team-modal-section-title">Squad Roster</div>
+
+                        <% if (isHost && !isStarted) { %>
+                        <form method="POST" action="/sport/<%= sportName %>/team-formation/<%= match.id %>">
+                        <% } %>
+                        <% 
+                            let teamA = squadPlayers.filter(p => p.team === 'A');
+                            let teamB = squadPlayers.filter(p => p.team === 'B' || !p.team);
+                            
+                            let capA_id = match.team_a_captain_id || match.user_id;
+                            let capB_id = match.team_b_captain_id || (teamB.length > 0 ? teamB[0].id : null);
+
+                            let totalCapacity = teamA.length + teamB.length + match.players_needed;
+                            let slotsPerTeam = Math.ceil(totalCapacity / 2);
+                        %>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <!-- Team A -->
+                            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                                <div style="font-size: 0.9rem; color: #f59e0b; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">Team A</div>
+                                <ul class="team-players-list" style="margin: 0;">
+                                    <% if (sportName.toLowerCase() !== 'cricket' && teamA.length === 0) { %>
+                                        <li style="text-align: center; color: #64748b; font-style: italic; padding: 1rem 0; list-style:none;">Awaiting players...</li>
+                                    <% } %>
+                                    <% teamA.forEach((p, i) => { %>
+                                        <li class="player-item <%= p.id.toString() === (capA_id ? capA_id.toString() : '') ? 'host-item' : '' %>">
+                                            <div class="player-avatar <%= p.id.toString() === (capA_id ? capA_id.toString() : '') ? 'host' : 'member' %>"><%= p.id.toString() === (capA_id ? capA_id.toString() : '') ? '👑' : '🏏' %></div>
+                                            <div style="flex:1;">
+                                                <div class="player-name">
+                                                    <%= p.name %>
+                                                    <% if (typeof playerAvgRatings !== 'undefined' && playerAvgRatings[p.id]) { %>
+                                                        <span style="font-size: 0.8rem; color: #f59e0b; margin-left: 0.5rem; background: rgba(245,158,11,0.1); padding: 0.1rem 0.4rem; border-radius: 4px;">⭐ <%= playerAvgRatings[p.id].avg %></span>
+                                                    <% } %>
+                                                </div>
+                                                <div class="player-role" style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <span><%= p.id.toString() === (capA_id ? capA_id.toString() : '') ? 'Team A Captain' : 'Player' %></span>
+                                                    <% if (sportName.toLowerCase() === 'cricket') { %>
+                                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;"><%= p.total_runs %> Runs &bull; <%= p.total_wickets %> Wkts</span>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <% if (isHost && !isStarted) { %>
+                                                <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer;">
+                                                    <input type="radio" name="team_a_captain" value="<%= p.id %>" <%= p.id.toString() === (capA_id ? capA_id.toString() : '') ? 'checked' : '' %>> Cap
+                                                </label>
+                                                <select name="team_<%= p.id %>" style="background:#334155; color:white; border:1px solid #475569; border-radius:6px; padding:0.3rem 0.5rem; font-size:0.85rem; font-weight:bold; cursor:pointer; margin-left: 0.5rem;">
+                                                    <option value="A" selected>Team A</option>
+                                                    <option value="B">Team B</option>
+                                                </select>
+                                            <% } %>
+                                        </li>
+                                    <% }); %>
+                                    <% if (sportName.toLowerCase() === 'cricket') { %>
+                                        <% for (let i = teamA.length; i < slotsPerTeam; i++) { %>
+                                            <li class="player-item" style="opacity: 0.6; border: 1px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
+                                                <div class="player-avatar member" style="background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.2);"></div>
+                                                <div style="flex:1;">
+                                                    <div class="player-name" style="font-style: italic; color: #94a3b8; font-size: 0.85rem;">Empty Slot <%= i + 1 %></div>
+                                                    <div class="player-role" style="font-size: 0.75rem;">Waiting for player...</div>
+                                                </div>
+                                            </li>
+                                        <% } %>
+                                    <% } %>
+                                </ul>
+                            </div>
+
+                            <!-- Team B -->
+                            <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                                <div style="font-size: 0.9rem; color: #3b82f6; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">Team B</div>
+                                <ul class="team-players-list" style="margin: 0;">
+                                    <% if (sportName.toLowerCase() !== 'cricket' && teamB.length === 0) { %>
+                                        <li style="text-align: center; color: #64748b; font-style: italic; padding: 1rem 0; list-style:none;">Awaiting players...</li>
+                                    <% } %>
+                                    <% teamB.forEach((p, i) => { %>
+                                        <li class="player-item <%= p.id.toString() === (capB_id ? capB_id.toString() : '') ? 'host-item' : '' %>">
+                                            <div class="player-avatar <%= p.id.toString() === (capB_id ? capB_id.toString() : '') ? 'host' : 'member' %>"><%= p.id.toString() === (capB_id ? capB_id.toString() : '') ? '👑' : '🏏' %></div>
+                                            <div style="flex:1;">
+                                                <div class="player-name">
+                                                    <%= p.name %>
+                                                    <% if (typeof playerAvgRatings !== 'undefined' && playerAvgRatings[p.id]) { %>
+                                                        <span style="font-size: 0.8rem; color: #f59e0b; margin-left: 0.5rem; background: rgba(245,158,11,0.1); padding: 0.1rem 0.4rem; border-radius: 4px;">⭐ <%= playerAvgRatings[p.id].avg %></span>
+                                                    <% } %>
+                                                </div>
+                                                <div class="player-role" style="display: flex; flex-direction: column; gap: 2px;">
+                                                    <span><%= p.id.toString() === (capB_id ? capB_id.toString() : '') ? 'Team B Captain' : 'Player' %></span>
+                                                    <% if (sportName.toLowerCase() === 'cricket') { %>
+                                                        <span style="font-size: 0.75rem; color: #64748b; font-weight: 500;"><%= p.total_runs %> Runs &bull; <%= p.total_wickets %> Wkts</span>
+                                                    <% } %>
+                                                </div>
+                                            </div>
+                                            <% if (isHost && !isStarted) { %>
+                                                <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; cursor:pointer;">
+                                                    <input type="radio" name="team_b_captain" value="<%= p.id %>" <%= p.id.toString() === (capB_id ? capB_id.toString() : '') ? 'checked' : '' %>> Cap
+                                                </label>
+                                                <select name="team_<%= p.id %>" style="background:#334155; color:white; border:1px solid #475569; border-radius:6px; padding:0.3rem 0.5rem; font-size:0.85rem; font-weight:bold; cursor:pointer; margin-left: 0.5rem;">
+                                                    <option value="A">Team A</option>
+                                                    <option value="B" selected>Team B</option>
+                                                </select>
+                                            <% } %>
+                                        </li>
+                                    <% }); %>
+                                    <% if (sportName.toLowerCase() === 'cricket') { %>
+                                        <% for (let i = teamB.length; i < slotsPerTeam; i++) { %>
+                                            <li class="player-item" style="opacity: 0.6; border: 1px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
+                                                <div class="player-avatar member" style="background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.2);"></div>
+                                                <div style="flex:1;">
+                                                    <div class="player-name" style="font-style: italic; color: #94a3b8; font-size: 0.85rem;">Empty Slot <%= i + 1 %></div>
+                                                    <div class="player-role" style="font-size: 0.75rem;">Waiting for player...</div>
+                                                </div>
+                                            </li>
+                                        <% } %>
+                                    <% } %>
+                                </ul>
+                            </div>
+                        </div>
+                        <% if (isHost && !isStarted && squadPlayers.length > 0) { %>
+                            <button type="submit" style="width:100%; margin-top:1rem; background:linear-gradient(135deg, #3b82f6, #2563eb); color:white; border:none; border-radius:8px; padding:0.8rem; font-weight:800; cursor:pointer;">💾 Save Teams</button>
+                        </form>
+                        <% } else if (isHost && !isStarted) { %>
+                        </form>
+                        <% } %>
+
+                        <div class="team-modal-footer">
+                            <div class="team-stat needed">
+                                <div class="team-stat-value"><%= match.players_needed %></div>
+                                <div class="team-stat-label">Still Need</div>
+                            </div>
+                            <div class="team-stat-divider"></div>
+                            <div class="team-stat size">
+                                <div class="team-stat-value"><%= squadPlayers.length + 1 %></div>
+                                <div class="team-stat-label">In Squad</div>
+                            </div>
+                            <div class="team-stat-divider"></div>
+                            <div class="team-stat total">
+                                <div class="team-stat-value"><%= match.players_needed + squadPlayers.length + 1 %></div>
+                                <div class="team-stat-label">Total Slots</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Close teamModal correctly here -->
+
+                <!-- Rating Modal -->
+                <% if (isFinished && typeof user !== 'undefined' && user && (match.user_id.toString() === user.id.toString() || joinedMatchIds.includes(match.id.toString()))) { %>
+                <div id="ratingModal<%= match.id %>" class="team-modal-overlay" style="display:none; z-index: 9999;" onclick="if(event.target===this)this.style.display='none'">
+                    <div class="team-modal-box" style="padding:0; overflow:hidden; border:none; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+                        <div class="team-modal-header" style="background: linear-gradient(135deg, #f59e0b, #ea580c); padding: 1.5rem; text-align:center;">
+                            <div style="position:relative;z-index:1; width:100%;">
+                                <div class="team-modal-name" style="font-size: 1.5rem; color:white;">Rate Your Teammates</div>
+                                <div class="team-modal-host" style="color: rgba(255,255,255,0.8); margin-top:0.25rem;"><%= match.team_name %></div>
+                            </div>
+                            <button class="team-modal-close" style="color:white; top:1rem; right:1rem;" onclick="document.getElementById('ratingModal<%= match.id %>').style.display='none'">✕</button>
+                        </div>
+                        <div class="team-modal-body" style="padding: 1.5rem; background: #f8fafc; max-height: 60vh; overflow-y: auto;">
+                            <ul class="team-players-list" style="display:flex; flex-direction:column; gap:0.75rem;">
+                                <% 
+                                    let rateablePlayers = squadPlayers.filter(p => p.id !== user.id);
+                                    if (match.user_id !== user.id) {
+                                        rateablePlayers.unshift({ id: match.user_id, name: match.host_name || 'Host' });
+                                    }
+                                %>
+                                <% if (rateablePlayers.length === 0) { %>
+                                    <li style="padding:2rem; text-align:center; color:#64748b; font-weight:500;">No other players to rate.</li>
+                                <% } %>
+                                <% rateablePlayers.forEach(p => { 
+                                    const safeRatings = typeof userRatings !== 'undefined' ? userRatings : [];
+                                    const existingRating = safeRatings.find(r => r.match_id === match.id.toString() && r.ratee_id === p.id.toString())?.rating || 0;
+                                %>
+                                    <li class="player-item" style="display:flex; justify-content:space-between; align-items:center; background:white; padding:1rem 1.25rem; border-radius:12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+                                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                                            <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">👤</div>
+                                            <div class="player-name" style="font-weight:600; color:#1e293b; font-size:1.1rem;"><%= p.name %></div>
+                                        </div>
+                                        <div class="star-rating" data-match="<%= match.id %>" data-ratee="<%= p.id %>" style="display:flex; gap:0.25rem; cursor:pointer; font-size:1.75rem; color:#cbd5e1;">
+                                            <% for(let i=1; i<=5; i++) { %>
+                                                <span class="star <%= i <= existingRating ? 'filled' : '' %>" data-value="<%= i %>" style="<%= i <= existingRating ? 'color:#f59e0b; text-shadow: 0 0 8px rgba(245,158,11,0.4);' : 'transition: color 0.2s;' %>" onclick="submitRating(this, <%= match.id %>, <%= p.id %>, <%= i %>)" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">★</span>
+                                            <% } %>
+                                        </div>
+                                    </li>
+                                <% }); %>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+            <% }); %>
+
+        <% } else { %>
+            <div class="empty-state">
+                <span class="empty-state-icon"><%= sc.icon %></span>
+                <h3>No matches posted yet</h3>
+                <p>Be the first! Post a game and find your squad.</p>
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <button class="btn-cricket-new" onclick="openNewGameModal()" style="margin:0 auto; display:inline-flex;">
+                        <%= sc.icon %> &nbsp;Post a Game
+                    </button>
+                <% } else { %>
+                    <button class="btn-cricket-new" onclick="openAuthModal()" style="margin:0 auto; display:inline-flex;">
+                        🔐 Login to Post
+                    </button>
+                <% } %>
+            </div>
+        <% } %>
+
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.match-card');
+    let userLocation = null;
+
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radius of the earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; 
+    }
+
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const filter = e.target.getAttribute('data-filter');
+            
+            if (filter.startsWith('nearby')) {
+                const maxDist = parseInt(filter.split('-')[1]) || 3;
+                if (!navigator.geolocation) {
+                    alert("Geolocation is not supported by your browser.");
+                    return;
+                }
+                const originalText = e.target.textContent;
+                e.target.textContent = '📍 Locating...';
+                
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        e.target.textContent = `📍 Near Me (${maxDist}km)`;
+                        userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        
+                        filterBtns.forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        cards.forEach(card => {
+                            const clat = parseFloat(card.getAttribute('data-lat'));
+                            const clng = parseFloat(card.getAttribute('data-lng'));
+                            
+                            let distBadge = card.querySelector('.distance-badge');
+                            
+                            if (!isNaN(clat) && !isNaN(clng)) {
+                                const dist = calculateDistance(userLocation.lat, userLocation.lng, clat, clng);
+                                
+                                if (!distBadge) {
+                                    distBadge = document.createElement('div');
+                                    distBadge.className = 'distance-badge';
+                                    distBadge.style.fontSize = '0.75rem';
+                                    distBadge.style.color = '#64748b';
+                                    distBadge.style.fontWeight = 'bold';
+                                    distBadge.style.marginTop = '0.5rem';
+                                    card.querySelector('.match-card-info').appendChild(distBadge);
+                                }
+                                distBadge.innerHTML = `📍 ${dist.toFixed(1)} km away`;
+                                distBadge.style.display = 'block';
+                                
+                                if (dist <= maxDist) {
+                                    card.style.display = 'flex';
+                                } else {
+                                    card.style.display = 'none';
+                                }
+                            } else {
+                                if (distBadge) distBadge.style.display = 'none';
+                                card.style.display = 'none';
+                            }
+                        });
+                    },
+                    (error) => {
+                        e.target.textContent = originalText;
+                        alert("Location access denied or unavailable. Showing all city grounds.");
+                        
+                        filterBtns.forEach(b => b.classList.remove('active'));
+                        const allBtn = document.querySelector('[data-filter="all"]');
+                        if (allBtn) {
+                            allBtn.classList.add('active');
+                            cards.forEach(card => card.style.display = 'flex');
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+                return;
+            }
+
+            // Normal filters
+            filterBtns.forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            
+            cards.forEach(card => {
+                let distBadge = card.querySelector('.distance-badge');
+                if (distBadge && !filter.startsWith('nearby')) {
+                    distBadge.style.display = 'none';
+                }
+                
+                if (filter === 'all') {
+                    card.style.display = 'flex';
+                } else if (filter === 'started') {
+                    card.style.display = card.classList.contains('is-started') ? 'flex' : 'none';
+                } else if (filter === 'open') {
+                    const badge = card.querySelector('.status-badge.open');
+                    card.style.display = badge ? 'flex' : 'none';
+                } else if (filter === 'finished') {
+                    const badgeText = card.querySelector('.status-badge')?.innerText || '';
+                    card.style.display = badgeText.includes('Finished') ? 'flex' : 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NEW GAME MODAL
+════════════════════════════════════════════════════════════ -->
+<div id="newGameModal" class="modal-overlay" style="display:none;">
+    <div class="ng-modal">
+        <div class="ng-modal-header">
+            <div class="ng-modal-icon"><%= sc.icon %></div>
+            <div>
+                <h2 class="ng-modal-title">Post a New <%= sportName %> Game</h2>
+                <p class="ng-modal-sub">Fill in the details · Build your squad · Play!</p>
+            </div>
+            <button class="ng-close-btn" onclick="closeNewGameModal()">✕</button>
+        </div>
+
+        <form action="/sport/<%= sportName.toLowerCase() %>/new" method="POST" class="ng-form">
+            <div class="ng-section">
+                <div class="ng-section-label"><span class="ng-section-icon">🛡️</span><span>Team Name</span></div>
+                <input type="text" name="teamName" placeholder="E.g. The Invincibles" required class="ng-input">
+            </div>
+            <div class="ng-section">
+                <div class="ng-section-label"><span class="ng-section-icon">📍</span><span>Venue / Location</span></div>
+                <div style="position: relative;">
+                    <div class="ng-search-row">
+                        <input type="text" id="locationSearchInput" name="location" placeholder="Search: N1, CIDCO, Stadium…" class="ng-input" autocomplete="off">
+                        <button type="button" id="searchBtn" class="ng-search-btn" onclick="searchAddress()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                            Search
+                        </button>
+                    </div>
+                    <div id="locationSuggestions" class="location-suggestions"></div>
+                </div>
+            </div>
+            <div class="ng-map-wrapper">
+                <div class="ng-map-topbar">
+                    <span class="ng-map-hint">📌 Tap map to pin location</span>
+                    <button type="button" class="ng-locate-btn" onclick="getLiveLocation()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+                        Live Location
+                    </button>
+                </div>
+                <div id="mapPicker" class="ng-map"></div>
+            </div>
+            <input type="url" id="googleMapsLink" name="googleMapsLink" style="display:none;">
+            <div class="ng-row">
+                <div class="ng-section">
+                    <div class="ng-section-label"><span class="ng-section-icon">📅</span><span>Date</span></div>
+                    <input type="date" name="date" required class="ng-input">
+                </div>
+                <div class="ng-section">
+                    <div class="ng-section-label"><span class="ng-section-icon">⏰</span><span>Time</span></div>
+                    <input type="time" name="time" required class="ng-input">
+                </div>
+            </div>
+            <% if (sportName.toLowerCase() === 'cricket') { %>
+                <input type="hidden" name="playersNeeded" value="22">
+            <% } else { %>
+                <div class="ng-section">
+                    <div class="ng-section-label"><span class="ng-section-icon">👥</span><span>Players Needed</span></div>
+                    <input type="number" name="playersNeeded" placeholder="E.g. 11" min="1" required class="ng-input">
+                </div>
+            <% } %>
+            <% if (sportName.toLowerCase() === 'cricket') { %>
+            <div class="ng-section">
+                <div class="ng-section-label"><span class="ng-section-icon">🏏</span><span>Overs</span></div>
+                <input type="number" name="overs" placeholder="E.g. 20" min="1" required class="ng-input">
+            </div>
+            <% } %>
+            <button type="submit" class="ng-submit-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                Post Game Now
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    let map = null;
+    let marker = null;
+
+    function initMap() {
+        if (!map) {
+            map = L.map('mapPicker').setView([19.8762, 75.3433], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(map);
+            L.Control.geocoder({
+                defaultMarkGeocode: false,
+                geocoder: L.Control.Geocoder.nominatim({ geocodingQueryParams: { viewbox:"75.2000,19.9500,75.4500,19.7500", bounded:1 } })
+            }).on('markgeocode', function(e) {
+                const latlng = e.geocode.center;
+                map.setView(latlng, 15);
+                if (marker) marker.setLatLng(latlng); else marker = L.marker(latlng).addTo(map);
+                document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${latlng.lat},${latlng.lng}`;
+                const locInput = document.querySelector('input[name="location"]');
+                if (locInput && !locInput.value) locInput.value = e.geocode.name;
+            }).addTo(map);
+            map.on('click', function(e) {
+                if (marker) marker.setLatLng(e.latlng); else marker = L.marker(e.latlng).addTo(map);
+                document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${e.latlng.lat},${e.latlng.lng}`;
+            });
+        } else { map.invalidateSize(); }
+    }
+
+    function getLiveLocation() {
+        if (!navigator.geolocation) { alert("Geolocation not supported."); return; }
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            const lat = pos.coords.latitude, lng = pos.coords.longitude;
+            map.setView([lat, lng], 15);
+            if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+            document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${lat},${lng}`;
+            const locInput = document.querySelector('input[name="location"]');
+            if (locInput && !locInput.value) locInput.value = "My Current Location";
+        }, function() { alert("Could not get location. Allow location access."); }, { enableHighAccuracy:true, timeout:10000 });
+    }
+
+    function searchAddress() {
+        const query = document.getElementById('locationSearchInput').value.trim();
+        if (!query) { alert("Please enter a location."); return; }
+        const btn = document.getElementById('searchBtn');
+        btn.textContent = 'Searching…'; btn.disabled = true;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=75.2000,19.9500,75.4500,19.7500&bounded=1&limit=1&accept-language=en`, { headers:{'Accept':'application/json'} })
+            .then(r => r.json())
+            .then(data => {
+                btn.textContent = 'Search'; btn.disabled = false;
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat), lng = parseFloat(data[0].lon);
+                    map.setView([lat, lng], 15);
+                    if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+                    document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${lat},${lng}`;
+                    document.getElementById('locationSearchInput').value = data[0].name || data[0].display_name.split(',')[0];
+                } else { alert("Location not found. Try a different keyword."); }
+            })
+            .catch(() => { btn.textContent = 'Search'; btn.disabled = false; alert("Search failed."); });
+    }
+
+    let suggestionTimeout = null;
+    document.addEventListener('DOMContentLoaded', () => {
+        const locInput = document.getElementById('locationSearchInput');
+        const suggBox = document.getElementById('locationSuggestions');
+
+        if (locInput) {
+            locInput.addEventListener('focus', function() {
+                if (this.value.trim() !== '') return;
+                
+                let coachHtml = '';
+                if ('<%= sportName.toLowerCase() %>' === 'badminton') {
+                    coachHtml = `<div class="suggestion-item" onclick="
+                        document.getElementById('locationSearchInput').value = 'Badminton Coach Session';
+                        document.getElementById('locationSuggestions').style.display = 'none';
+                        document.getElementById('googleMapsLink').value = '';
+                    ">🏸 <strong>Book a Badminton Coach</strong> <span style="font-size:0.8em; color:#64748b;">Professional Training</span></div>`;
+                }
+
+                if (!navigator.geolocation) {
+                    if (coachHtml) {
+                        suggBox.innerHTML = coachHtml;
+                        suggBox.style.display = 'block';
+                    }
+                    return;
+                }
+
+                suggBox.innerHTML = coachHtml + '<div class="suggestion-item">📍 Finding nearby grounds (3km)...</div>';
+                suggBox.style.display = 'block';
+
+                navigator.geolocation.getCurrentPosition(pos => {
+                    if (this.value.trim() !== '') return;
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    const query = `
+                        [out:json][timeout:10];
+                        (
+                          node["leisure"~"pitch|stadium|park|sports_centre"](around:3000,${lat},${lon});
+                          way["leisure"~"pitch|stadium|park|sports_centre"](around:3000,${lat},${lon});
+                        );
+                        out center;
+                    `;
+                    fetch('https://overpass-api.de/api/interpreter', {
+                        method: 'POST',
+                        body: query
+                    }).then(r => r.json()).then(data => {
+                        if (this.value.trim() !== '') return;
+                        suggBox.innerHTML = '';
+                        let count = 0;
+
+                        if ('<%= sportName.toLowerCase() %>' === 'badminton') {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerHTML = '🏸 <strong>Book a Badminton Coach</strong> <span style="font-size:0.8em; color:#64748b;">Professional Training</span>';
+                            div.onclick = function() {
+                                locInput.value = 'Badminton Coach Session';
+                                suggBox.style.display = 'none';
+                                document.getElementById('googleMapsLink').value = '';
+                            };
+                            suggBox.appendChild(div);
+                            count++;
+                        }
+                        if (data.elements && data.elements.length > 0) {
+                            data.elements.forEach(el => {
+                                if (count >= 10) return;
+                                const name = el.tags && el.tags.name;
+                                if (!name) return;
+                                count++;
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                div.innerHTML = `📍 <strong>${name}</strong>`;
+                                div.onclick = function() {
+                                    locInput.value = name;
+                                    suggBox.style.display = 'none';
+                                    const elLat = el.lat || el.center.lat;
+                                    const elLon = el.lon || el.center.lon;
+                                    map.setView([elLat, elLon], 15);
+                                    if (marker) marker.setLatLng([elLat, elLon]); else marker = L.marker([elLat, elLon]).addTo(map);
+                                    document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${elLat},${elLon}`;
+                                };
+                                suggBox.appendChild(div);
+                            });
+                        }
+                        if (count === 0) {
+                            suggBox.innerHTML = '<div class="suggestion-item" style="color:#64748b;">No named grounds found within 3km. Type to search globally.</div>';
+                        }
+                        if (count > 0) suggBox.style.display = 'block';
+                    }).catch(() => {
+                        if (this.value.trim() === '') suggBox.style.display = 'none';
+                    });
+                }, err => {
+                    if (this.value.trim() === '') suggBox.style.display = 'none';
+                });
+            });
+
+            locInput.addEventListener('input', function() {
+                clearTimeout(suggestionTimeout);
+                const query = this.value.trim();
+                if (query.length < 3) { suggBox.style.display = 'none'; return; }
+                
+                suggestionTimeout = setTimeout(() => {
+                    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&viewbox=75.2000,19.9500,75.4500,19.7500&bounded=1&limit=5&accept-language=en`, { headers:{'Accept':'application/json'} })
+                    .then(r => r.json())
+                    .then(data => {
+                        suggBox.innerHTML = '';
+                        let addedCoach = false;
+                        if ('<%= sportName.toLowerCase() %>' === 'badminton' && query.toLowerCase().includes('coach')) {
+                            const div = document.createElement('div');
+                            div.className = 'suggestion-item';
+                            div.innerHTML = '🏸 <strong>Book a Badminton Coach</strong> <span style="font-size:0.8em; color:#64748b;">Professional Training</span>';
+                            div.onclick = function() {
+                                locInput.value = 'Badminton Coach Session';
+                                suggBox.style.display = 'none';
+                                document.getElementById('googleMapsLink').value = '';
+                            };
+                            suggBox.appendChild(div);
+                            addedCoach = true;
+                        }
+
+                        if (data && data.length > 0) {
+                            data.forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'suggestion-item';
+                                const shortName = item.name || item.display_name.split(',')[0];
+                                const subName = item.display_name.split(',').slice(1,3).join(',');
+                                div.innerHTML = `📍 <strong>${shortName}</strong> <span style="font-size:0.8em; color:#64748b;">${subName}</span>`;
+                                div.onclick = function() {
+                                    locInput.value = shortName;
+                                    suggBox.style.display = 'none';
+                                    const lat = parseFloat(item.lat), lng = parseFloat(item.lon);
+                                    map.setView([lat, lng], 15);
+                                    if (marker) marker.setLatLng([lat, lng]); else marker = L.marker([lat, lng]).addTo(map);
+                                    document.getElementById('googleMapsLink').value = `https://www.google.com/maps?q=${lat},${lng}`;
+                                };
+                                suggBox.appendChild(div);
+                            });
+                            suggBox.style.display = 'block';
+                        } else if (addedCoach) {
+                            suggBox.style.display = 'block';
+                        } else {
+                            suggBox.style.display = 'none';
+                        }
+                    }).catch(() => suggBox.style.display = 'none');
+                }, 400);
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (e.target !== locInput && e.target !== suggBox) {
+                    suggBox.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    function openNewGameModal()  { document.getElementById('newGameModal').style.display = 'flex'; setTimeout(initMap, 50); }
+    function closeNewGameModal() { document.getElementById('newGameModal').style.display = 'none'; }
+
+    window.addEventListener('click', function(e) {
+        if (e.target === document.getElementById('newGameModal')) closeNewGameModal();
+        if (e.target === document.getElementById('matchFinishedModal')) document.getElementById('matchFinishedModal').style.display='none';
+    });
+
+    async function submitRating(starElement, matchId, rateeId, rating) {
+        const container = starElement.parentElement;
+        const stars = container.querySelectorAll('.star');
+        stars.forEach(s => {
+            if (parseInt(s.getAttribute('data-value')) <= rating) {
+                s.classList.add('filled');
+                s.style.color = '#f59e0b';
+            } else {
+                s.classList.remove('filled');
+                s.style.color = '#cbd5e1';
+            }
+        });
+
+        try {
+            const res = await fetch(`/sport/<%= sportName.toLowerCase() %>/rate/${matchId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ratee_id: rateeId, rating: rating })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message || 'Error submitting rating');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error submitting rating');
+        }
+    }
+</script>
+
+<% if (typeof finishedMatchId !== 'undefined' && finishedMatchId) { 
+    const finishedMatch = matches.find(m => m.id == finishedMatchId);
+    if (finishedMatch) {
+        let winnerText = 'Match Finished!';
+        if (finishedMatch.score) {
+            const parts = finishedMatch.score.split('-');
+            if (parts.length === 2) {
+                const scoreA = parseInt(parts[0].trim());
+                const scoreB = parseInt(parts[1].trim());
+                if (!isNaN(scoreA) && !isNaN(scoreB)) {
+                    if (scoreA > scoreB) winnerText = '🏆 Team A Won 🏆';
+                    else if (scoreB > scoreA) winnerText = '🏆 Team B Won 🏆';
+                    else winnerText = '🤝 Match Drawn 🤝';
+                }
+            }
+        }
+%>
+    <div id="matchFinishedModal" class="team-modal-overlay" style="display:flex; z-index: 9999;">
+        <div class="team-modal-box" style="text-align: center; padding: 3rem 2rem; background: linear-gradient(135deg, #ffffff, #f0fdf4); border: 2px solid #22c55e;">
+            <div style="font-size: 4rem; margin-bottom: 1rem; animation: modalPop 0.5s ease;">🎉</div>
+            <h2 style="font-size: 2.2rem; font-weight: 900; color: #16a34a; margin-bottom: 0.5rem;">Match Completed!</h2>
+            <div style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin-bottom: 1.5rem;"><%= finishedMatch.team_name %></div>
+            
+            <div style="background: white; border: 2px solid #bbf7d0; border-radius: 20px; padding: 2rem 1.5rem; margin-bottom: 2.5rem; box-shadow: 0 10px 30px rgba(34, 197, 94, 0.15);">
+                <div style="font-size: 1rem; font-weight: 800; color: #64748b; margin-bottom: 0.8rem; text-transform: uppercase; letter-spacing: 2px;">Final Score</div>
+                <div style="font-size: 4rem; font-weight: 900; color: #15803d; line-height: 1; font-variant-numeric: tabular-nums;"><%= finishedMatch.score || '0 - 0' %></div>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #dc2626; margin-top: 1.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);"><%= winnerText %></div>
+            </div>
+
+            <button onclick="document.getElementById('matchFinishedModal').style.display='none'" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 1.2rem 3.5rem; font-size: 1.15rem; font-weight: 800; border-radius: 50px; cursor: pointer; box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4); transition: transform 0.2s;">
+                Awesome!
+            </button>
+        </div>
+    </div>
+<% 
+    }
+} %>
+
+<%- include('layout/footer') %>

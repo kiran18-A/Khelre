@@ -1,0 +1,54 @@
+{
+    "cricket": {
+        "playersLookingForTeam": [
+            {
+                "id": "p1",
+                "name": "Rahul S.",
+                "role": "Opening Batsman",
+                "location": "Downtown Sports Complex",
+                "availability": "Weekends only",
+                "skillLevel": "Intermediate"
+            },
+            {
+                "id": "p2",
+                "name": "Amit K.",
+                "role": "Fast Bowler",
+                "location": "Northside Ground",
+                "availability": "Evenings, Weekends",
+                "skillLevel": "Advanced"
+            }
+        ],
+        "teamsLookingForPlayers": [
+            {
+                "id": "t1",
+                "teamName": "Weekend Warriors",
+                "need": "Wicket Keeper",
+                "location": "City Park Ground",
+                "matchTime": "Saturday, 9:00 AM",
+                "description": "Looking for a reliable wicket keeper for our weekly league match."
+            }
+        ]
+    },
+    "badminton": {
+        "playersLookingForTeam": [
+            {
+                "id": "p3",
+                "name": "Priya M.",
+                "role": "Doubles Partner",
+                "location": "Westside Hall",
+                "availability": "Weekday mornings",
+                "skillLevel": "Beginner/Intermediate"
+            }
+        ],
+        "teamsLookingForPlayers": [
+            {
+                "id": "t2",
+                "teamName": "Smash Hitters",
+                "need": "Mixed Doubles Player",
+                "location": "Community Center",
+                "matchTime": "Sunday, 7:00 AM",
+                "description": "Need one more player to complete our group booking."
+            }
+        ]
+    }
+}
