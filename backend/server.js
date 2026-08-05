@@ -3,6 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const { initDB, User, Player, Team, Match, MatchPlayer, Rating, PlayerMatchStat } = require('./db');
 const mongoose = require('mongoose');
 
@@ -52,11 +53,18 @@ app.set('views', path.join(__dirname, '../views'));
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Session Middleware
+// Session Middleware (MongoDB Store for Vercel)
 app.use(session({
     secret: 'khel_re_super_secret_key',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        collectionName: 'sessions'
+    }),
+    cookie: {
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+    }
 }));
 
 // Make user available to all templates
