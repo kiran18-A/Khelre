@@ -53,19 +53,24 @@ app.set('views', path.join(__dirname, '../views'));
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Session Middleware (MongoDB Store for Vercel)
-app.use(session({
+// Session Middleware (MongoDB Store for Vercel, with fallback)
+const sessionOptions = {
     secret: 'khel_re_super_secret_key',
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        collectionName: 'sessions'
-    }),
     cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
     }
-}));
+};
+
+if (process.env.MONGODB_URI) {
+    sessionOptions.store = MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        collectionName: 'sessions'
+    });
+}
+
+app.use(session(sessionOptions));
 
 // Make user available to all templates
 app.use(async (req, res, next) => {
