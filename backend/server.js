@@ -3,7 +3,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const MongoStore = require('connect-mongo').default;
 const { initDB, User, Player, Team, Match, MatchPlayer, Rating, PlayerMatchStat } = require('./db');
 const mongoose = require('mongoose');
 
