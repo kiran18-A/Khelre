@@ -8,8 +8,25 @@
   ],
   "routes": [
     {
+      "src": "/css/(.*)",
+      "dest": "/public/css/$1"
+    },
+    {
+      "src": "/img/(.*)",
+      "dest": "/public/img/$1"
+    },
+    {
+      "src": "/data/(.*)",
+      "dest": "/public/data/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "backend/server.js"
     }
-  ]
+  ],
+  "functions": {
+    "backend/server.js": {
+      "maxDuration": 30
+    }
+  }
 }

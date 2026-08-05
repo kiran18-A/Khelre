@@ -1,4 +1,7 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+// Load environment variables only in local development (Vercel uses dashboard env vars)
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+}
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -13,39 +16,8 @@ const PORT = process.env.PORT || 3000;
 // Initialize database automatically on startup
 initDB();
 
-// Auto-start or timeout matches when their scheduled time arrives
-setInterval(async () => {
-    try {
-        const now = new Date();
-        const openMatches = await Match.find({ status: 'open' });
-        
-        for (let m of openMatches) {
-            // Parse HH:MM AM/PM
-            const [timeStr, modifier] = (m.match_time || '12:00 AM').split(' ');
-            let [hours, minutes] = timeStr.split(':');
-            hours = parseInt(hours, 10);
-            if (modifier && modifier.toUpperCase() === 'PM' && hours !== 12) hours += 12;
-            if (modifier && modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-            
-            const matchDateTime = new Date(m.match_date);
-            matchDateTime.setHours(hours, parseInt(minutes, 10) || 0, 0, 0);
-
-            if (matchDateTime <= now) {
-                const totalTeamA = await MatchPlayer.countDocuments({ match_id: m._id, team: 'A' });
-                const totalTeamB = await MatchPlayer.countDocuments({ match_id: m._id, team: { $in: ['B', null] } });
-
-                if ((m.players_needed || 0) <= 0 && totalTeamA > 0 && totalTeamA === totalTeamB) {
-                    m.status = 'started';
-                } else {
-                    m.status = 'timeout';
-                }
-                await m.save();
-            }
-        }
-    } catch (err) {
-        console.error('Error auto-processing matches:', err);
-    }
-}, 60000); // Check every minute
+// NOTE: setInterval is removed - Vercel serverless functions are stateless.
+// Match timeouts are now processed on-demand when /sport/:type page is loaded.
 // Set EJS as templating engine
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
@@ -53,21 +25,27 @@ app.set('views', path.join(__dirname, '../views'));
 // Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Session Middleware (MongoDB Store for Vercel, with fallback)
+// Session Middleware (MongoDB Store for Vercel, with safe fallback)
 const sessionOptions = {
     secret: 'khel_re_super_secret_key',
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        secure: false
     }
 };
 
-if (process.env.MONGODB_URI) {
-    sessionOptions.store = MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        collectionName: 'sessions'
-    });
+try {
+    if (process.env.MONGODB_URI) {
+        sessionOptions.store = MongoStore.create({
+            mongoUrl: process.env.MONGODB_URI,
+            collectionName: 'sessions',
+            ttl: 60 * 60 * 24 * 7
+        });
+    }
+} catch (e) {
+    console.error('MongoStore init failed, using memory store fallback:', e.message);
 }
 
 app.use(session(sessionOptions));
